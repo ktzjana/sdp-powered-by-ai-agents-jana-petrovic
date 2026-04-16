@@ -1,0 +1,27 @@
+@startuml seq-reveal-cell
+participant Player
+participant CLI
+participant Game
+participant Board
+
+Player -> CLI : "r 2 3"
+CLI -> CLI : InputParser.parse("r 2 3")
+CLI -> Game : reveal(row=2, col=3)
+Game -> Board : reveal(2, 3)
+alt cell is mine
+  Board --> Game : MINE_HIT
+  Game --> CLI : game_over(loss)
+  CLI --> Player : "BOOM! You hit a mine."
+else cell is empty (no adjacent mines)
+  Board -> Board : flood_fill(2, 3)
+  Board --> Game : OK
+  Game -> Game : check_win()
+  Game --> CLI : board_state
+  CLI --> Player : rendered board
+else cell has adjacent mines
+  Board --> Game : OK
+  Game -> Game : check_win()
+  Game --> CLI : board_state
+  CLI --> Player : rendered board
+end
+@enduml

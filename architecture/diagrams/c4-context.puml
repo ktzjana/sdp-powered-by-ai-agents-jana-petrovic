@@ -1,15 +1,9 @@
-@startuml
+@startuml c4-context
 !include c4-lib/C4_Context.puml
 
-title Minesweeper - System Context
+Person(player, "Player", "Runs the game via CLI and interacts by typing commands")
+System(minesweeper, "Minesweeper", "CLI-based puzzle game. Manages board state, processes player input, and displays results.")
 
-Person(player, "Player", "User who plays the game")
-
-System(minesweeper, "Minesweeper System", "Grid-based puzzle game")
-
-System_Ext(device, "User Device", "Browser or CLI")
-
-Rel(player, minesweeper, "plays")
-Rel(minesweeper, device, "runs on")
+Rel(player, minesweeper, "Reveal cell / Flag cell / Start game", "stdin/stdout")
 
 @enduml

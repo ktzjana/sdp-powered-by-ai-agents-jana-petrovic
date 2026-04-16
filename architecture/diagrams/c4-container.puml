@@ -1,0 +1,16 @@
+@startuml c4-container
+!include c4-lib/C4_Container.puml
+
+Person(player, "Player", "Interacts via terminal")
+
+System_Boundary(minesweeper, "Minesweeper") {
+  Container(cli, "CLI", "Python module", "Reads stdin, renders board to stdout")
+  Container(controller, "Game Controller", "Python module", "Orchestrates game loop and input handling")
+  Container(domain, "Domain", "Python module", "Board state, mine placement, reveal/flag logic")
+}
+
+Rel(player, cli, "Types commands", "stdin/stdout")
+Rel(cli, controller, "Parsed command")
+Rel(controller, domain, "Calls")
+
+@enduml

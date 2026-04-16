@@ -1,0 +1,15 @@
+@startuml seq-win
+participant Player
+participant CLI
+participant Game
+participant Board
+
+Player -> CLI : "r 3 3"
+CLI -> Game : reveal(row=3, col=3)
+Game -> Board : reveal(3, 3)
+Board --> Game : OK
+Game -> Game : check_win()
+note right: all safe cells revealed?
+Game --> CLI : game_over(win)
+CLI --> Player : "You win!"
+@enduml
