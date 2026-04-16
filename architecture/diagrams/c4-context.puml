@@ -1,0 +1,15 @@
+@startuml
+!include c4-lib/C4_Context.puml
+
+title Minesweeper - System Context
+
+Person(player, "Player", "User who plays the game")
+
+System(minesweeper, "Minesweeper System", "Grid-based puzzle game")
+
+System_Ext(device, "User Device", "Browser or CLI")
+
+Rel(player, minesweeper, "plays")
+Rel(minesweeper, device, "runs on")
+
+@enduml
