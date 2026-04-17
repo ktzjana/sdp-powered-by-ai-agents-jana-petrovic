@@ -89,14 +89,14 @@ Together they exercise all three architectural layers (CLI → Game Controller �
 
 ## Progress Tracking
 
-📊 Pareto Progress: 0/3 core stories (0% of 20% core stories)
-🎯 Core functionality coverage: ~0% of 80% target
+📊 Pareto Progress: 3/3 core stories (100% of 20% core stories)
+🎯 Supporting story coverage: 5/5 supporting stories written — all stories complete
 
-| Story Bundle     | Status      |
-|------------------|-------------|
-| `BOARD-STORY-001` | ⏳ Pending  |
-| `GAME-STORY-001`  | ⏳ Pending  |
-| `GAME-STORY-002`  | ⏳ Pending  |
-| `GAME-STORY-003`  | ⏳ Pending  |
-| `CLI-STORY-001`   | ⏳ Pending  |
-| `CLI-STORY-002`   | ⏳ Pending  |
+| Story Bundle      | Status       | File                                    |
+|-------------------|--------------|-----------------------------------------|
+| `BOARD-STORY-001` | ✅ Written   | `docs/user-stories/board.md`            |
+| `GAME-STORY-001`  | ✅ Written   | `docs/user-stories/game-reveal.md`      |
+| `GAME-STORY-002`  | ✅ Written   | `docs/user-stories/game-win-loss.md`    |
+| `GAME-STORY-003`  | ✅ Written   | `docs/user-stories/game-flag.md`        |
+| `CLI-STORY-001`   | ✅ Written   | `docs/user-stories/cli-story-001.md`    |
+| `CLI-STORY-002`   | ✅ Written   | `docs/user-stories/cli-story-002.md`    |
