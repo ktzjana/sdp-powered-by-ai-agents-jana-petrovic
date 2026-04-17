@@ -1,0 +1,9 @@
+@startuml c4-context
+!include c4-lib/C4_Context.puml
+
+Person(player, "Player", "Runs the game via CLI and interacts by typing commands")
+System(minesweeper, "Minesweeper", "CLI-based puzzle game. Manages board state, processes player input, and displays results.")
+
+Rel(player, minesweeper, "Reveal cell / Flag cell / Start game", "stdin/stdout")
+
+@enduml
