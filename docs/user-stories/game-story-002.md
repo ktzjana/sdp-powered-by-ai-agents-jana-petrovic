@@ -203,61 +203,140 @@
 
 ## INFRA Sub-Stories
 
-### GAME-INFRA-002.1
+### GAME-INFRA-002.1 — Deployment / Execution Environment
 
 **AS A** developer
-**I WANT** pytest tests for win/loss detection to run automatically
-**SO THAT** regressions in game-ending logic are caught immediately
+**I WANT** the process to exit with code 0 on both win and loss outcomes
+**SO THAT** automated test runners can verify the game completed without errors
 
-**Architecture Reference:** Chapter 1 Introduction and Goals — Quality Goal: Testability; Chapter 10 Quality Requirements — QS-1, QS-2
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run; Chapter 9 Architecture Decisions — ADR-003
 
-#### GAME-INFRA-002.1-S1: Win/loss unit tests run via pytest with no I/O
+#### GAME-INFRA-002.1-S1: Process exits cleanly after win
 
 **GIVEN**
-- unit tests for `Game.check_win()` and loss-state transition exist under `tests/`
+
+* the game is run with `python minesweeper/cli.py --seed 7`
+* the player reveals all safe cells
 
 **WHEN**
-- `pytest` is executed from the project root
+
+* the win condition is triggered
 
 **THEN**
-- all win/loss tests are discovered and pass
-- no stdin/stdout is accessed during the test run
+
+* the process exits with code 0
+* `"You win!"` was printed before exit
+
+#### GAME-INFRA-002.1-S2: Process exits cleanly after loss
+
+**GIVEN**
+
+* the game is run with `python minesweeper/cli.py --seed 7`
+* the player reveals a mine
+
+**WHEN**
+
+* the loss condition is triggered
+
+**THEN**
+
+* the process exits with code 0
+* `"BOOM! You hit a mine."` was printed before exit
 
 ---
 
-### GAME-INFRA-002.2
+### GAME-INFRA-002.2 — Data Store / State Persistence
 
 **AS A** developer
-**I WANT** the process to exit with code 0 on win and code 0 on loss (clean exit)
-**SO THAT** automated test runners can verify the game completed without errors
+**I WANT** the game state (including win/loss status) to be held entirely in-memory
+**SO THAT** no file I/O is needed to track or persist the game outcome
 
-**Architecture Reference:** Chapter 7 Deployment View; Chapter 9 Architecture Decisions — ADR-003
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — Game, Board
 
-#### GAME-INFRA-002.2-S1: Process exits cleanly after win
+> **Applicability note:** The architecture specifies no persistent storage. `Game.state` (WIN / LOSS / IN_PROGRESS) lives in the in-memory `Game` object. There is no save/resume feature. This story verifies that the win/loss state is never written to disk.
 
-**GIVEN**
-- the game is run with `python minesweeper/cli.py --seed 7`
-- the player reveals all safe cells
-
-**WHEN**
-- the win condition is triggered
-
-**THEN**
-- the process exits with code 0
-- `"You win!"` was printed before exit
-
-#### GAME-INFRA-002.2-S2: Process exits cleanly after loss
+#### GAME-INFRA-002.2-S1: Win/loss state is not written to disk
 
 **GIVEN**
-- the game is run with `python minesweeper/cli.py --seed 7`
-- the player reveals a mine
+
+* the game is running and the player triggers a win or loss condition
 
 **WHEN**
-- the loss condition is triggered
+
+* `Game` transitions to WIN or LOSS state
 
 **THEN**
-- the process exits with code 0
-- `"BOOM! You hit a mine."` was printed before exit
+
+* no files are created or modified in the working directory
+* the outcome is communicated solely via stdout and process exit code
+
+---
+
+### GAME-INFRA-002.3 — Event Handling / Integration Points
+
+**AS A** developer
+**I WANT** win and loss conditions to be evaluated as discrete post-action events after every reveal
+**SO THAT** the game loop terminates correctly and no further input is accepted after a terminal state
+
+**Architecture Reference:** Chapter 5 Building Block View — Game; Chapter 6 Runtime View — 6.1 Scenario: Reveal a Cell, 6.3 Scenario: Win Condition
+
+#### GAME-INFRA-002.3-S1: Game loop stops accepting input after a terminal state is reached
+
+**GIVEN**
+
+* the game has transitioned to WIN or LOSS state
+
+**WHEN**
+
+* the game loop evaluates the next iteration
+
+**THEN**
+
+* no input prompt is shown
+* `Game.reveal()` rejects or no-ops any further calls
+* the process exits cleanly
+
+---
+
+### GAME-INFRA-002.4 — Monitoring / Observability
+
+**AS A** developer
+**I WANT** the win and loss outcomes to produce distinct, visible messages on stdout
+**SO THAT** the game result is unambiguous and diagnosable in both manual and automated runs
+
+**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 10 Quality Requirements — QS-1, QS-2
+
+#### GAME-INFRA-002.4-S1: Win outcome is confirmed with a visible message and final board state
+
+**GIVEN**
+
+* the player has just revealed the last safe cell
+
+**WHEN**
+
+* `Game` signals the win condition to the CLI
+
+**THEN**
+
+* the final board is rendered to stdout
+* `"You win!"` is printed after the board render
+* no further input prompt appears
+
+#### GAME-INFRA-002.4-S2: Loss outcome is confirmed with a visible message and mine position visible
+
+**GIVEN**
+
+* the player has just revealed a mine
+
+**WHEN**
+
+* `Game` signals the loss condition to the CLI
+
+**THEN**
+
+* `"BOOM! You hit a mine."` is printed to stdout
+* the board is rendered showing the triggered mine position
+* no further input prompt appears
 
 ---
 
@@ -276,6 +355,9 @@
 | GAME-BE-002.2-S1      | Chapter 5 Building Block View — Game, Chapter 10 QS-1              | GAME-BE-002.2    | game.state == LOSS after MINE_HIT; further reveals rejected               |
 | GAME-BE-002.2-S2      | Chapter 6 Runtime View 6.3                                          | GAME-BE-002.2    | game.state == WIN after check_win passes                                  |
 | GAME-BE-002.3-S1      | Chapter 5 Building Block View — Cell, Chapter 12 Glossary          | GAME-BE-002.3    | flagged-but-unrevealed safe cell keeps check_win() returning False        |
-| GAME-INFRA-002.1-S1   | Chapter 1 Quality Goal: Testability, Chapter 10 QS-1, QS-2         | GAME-INFRA-002.1 | pytest runs all win/loss tests with zero I/O dependencies                 |
-| GAME-INFRA-002.2-S1   | Chapter 7 Deployment View, Chapter 9 ADR-003                        | GAME-INFRA-002.2 | process exits 0 after win; "You win!" in stdout                           |
-| GAME-INFRA-002.2-S2   | Chapter 7 Deployment View, Chapter 9 ADR-003                        | GAME-INFRA-002.2 | process exits 0 after loss; "BOOM!" in stdout                             |
+| GAME-INFRA-002.1-S1   | Chapter 7 Deployment View — 7.3; Chapter 9 ADR-003                  | GAME-INFRA-002.1 | process exits 0 after win; "You win!" in stdout                           |
+| GAME-INFRA-002.1-S2   | Chapter 7 Deployment View — 7.3; Chapter 9 ADR-003                  | GAME-INFRA-002.1 | process exits 0 after loss; "BOOM!" in stdout                             |
+| GAME-INFRA-002.2-S1   | Chapter 7 Deployment View — 7.4 (Persistent storage: None)          | GAME-INFRA-002.2 | no files created on win/loss; outcome via stdout and exit code only       |
+| GAME-INFRA-002.3-S1   | Chapter 5 Building Block View — Game; Chapter 6 Runtime View 6.3    | GAME-INFRA-002.3 | game loop stops; no prompt shown; further reveals rejected after terminal |
+| GAME-INFRA-002.4-S1   | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-2       | GAME-INFRA-002.4 | final board rendered; "You win!" printed; no further prompt               |
+| GAME-INFRA-002.4-S2   | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-1       | GAME-INFRA-002.4 | board rendered with mine visible; "BOOM!" printed; no further prompt      |

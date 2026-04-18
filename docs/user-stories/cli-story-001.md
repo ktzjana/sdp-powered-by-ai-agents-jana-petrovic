@@ -184,47 +184,121 @@
 
 ## INFRA Sub-Stories
 
-### CLI-INFRA-001.1
+### CLI-INFRA-001.1 — Deployment / Execution Environment
 
 **AS A** developer
-**I WANT** pytest tests for `InputParser` to run automatically
-**SO THAT** regressions in command parsing are caught immediately
+**I WANT** the game to handle `EOF` on stdin gracefully and run with a single command
+**SO THAT** automated piped-input tests do not leave the process hanging and no installation is needed
 
-**Architecture Reference:** Chapter 1 Introduction and Goals — Quality Goal: Testability; Chapter 10 Quality Requirements — QS-3, QS-4
+**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling; Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003
 
-#### CLI-INFRA-001.1-S1: InputParser unit tests run via pytest with no I/O
+#### CLI-INFRA-001.1-S1: EOF on stdin exits the game cleanly
 
 **GIVEN**
-- unit tests for `InputParser.parse()` exist under `tests/`
+
+* the game is started and stdin reaches EOF (e.g. piped input ends)
 
 **WHEN**
-- `pytest` is executed from the project root
+
+* the game loop attempts to read the next command
 
 **THEN**
-- all parser-related tests are discovered and pass
-- no stdin/stdout is accessed during the test run
+
+* the process exits with code 0
+* no unhandled exception is raised
 
 ---
 
-### CLI-INFRA-001.2
+### CLI-INFRA-001.2 — Data Store / State Persistence
 
 **AS A** developer
-**I WANT** the game to handle `EOF` on stdin gracefully
-**SO THAT** automated piped-input tests do not leave the process hanging
+**I WANT** the parsed command to be dispatched directly to the in-memory `Game` object without any intermediate storage
+**SO THAT** no file I/O is introduced in the input-handling path
 
-**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling; Chapter 7 Deployment View
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — InputParser, Game
 
-#### CLI-INFRA-001.2-S1: EOF on stdin exits the game cleanly
+> **Applicability note:** The architecture specifies no persistent storage. Parsed commands are transient values passed directly to `Game`; they are never written to disk or queued in a file. This story verifies that constraint holds in the CLI input path.
+
+#### CLI-INFRA-001.2-S1: Parsed commands are dispatched in-memory without disk I/O
 
 **GIVEN**
-- the game is started and stdin reaches EOF (e.g. piped input ends)
+
+* the game is running and the player enters `r 2 3`
 
 **WHEN**
-- the game loop attempts to read the next command
+
+* `InputParser.parse()` returns the reveal command and the CLI dispatches it to `Game`
 
 **THEN**
-- the process exits with code 0
-- no unhandled exception is raised
+
+* `Game.reveal(2, 3)` is called directly in-memory
+* no files are created or modified in the working directory
+
+---
+
+### CLI-INFRA-001.3 — Event Handling / Integration Points
+
+**AS A** developer
+**I WANT** each player input to be processed as a discrete event through `InputParser` → `Game` with clear error boundaries
+**SO THAT** invalid input is rejected at the parser layer before any domain call is made
+
+**Architecture Reference:** Chapter 5 Building Block View — InputParser, Game; Chapter 8 Cross-cutting Concepts — 8.4 Input Validation; Chapter 6 Runtime View — 6.1, 6.2
+
+#### CLI-INFRA-001.3-S1: Invalid input is rejected at the parser layer with no domain side-effects
+
+**GIVEN**
+
+* the game is running
+
+**WHEN**
+
+* the player enters `xyz` or `r abc`
+
+**THEN**
+
+* `InputParser.parse()` signals a parse error before any `Game` method is called
+* the CLI prints a usage hint and re-prompts
+* no domain state is mutated
+
+---
+
+### CLI-INFRA-001.4 — Monitoring / Observability
+
+**AS A** developer
+**I WANT** every command outcome (valid dispatch, parse error, quit) to produce a visible response on stdout
+**SO THAT** the CLI interaction is fully diagnosable without a debugger
+
+**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 10 Quality Requirements — QS-4
+
+#### CLI-INFRA-001.4-S1: Parse error produces a visible usage hint on stdout
+
+**GIVEN**
+
+* the game is running
+
+**WHEN**
+
+* the player enters an unrecognised command
+
+**THEN**
+
+* a usage hint (e.g. `"Usage: r <row> <col> | f <row> <col> | q"`) is printed to stdout
+* the input prompt reappears immediately after
+
+#### CLI-INFRA-001.4-S2: Quit command produces a visible confirmation before exit
+
+**GIVEN**
+
+* the game is running
+
+**WHEN**
+
+* the player enters `q`
+
+**THEN**
+
+* the game loop exits and the process terminates with code 0
+* stdout contains at least the final board state or a goodbye message before exit
 
 ---
 
@@ -243,5 +317,8 @@
 | CLI-BE-001.1-S2      | Chapter 5 — InputParser                                             | CLI-BE-001.1    | parse("f 1 4") returns action=flag, row=1, col=4                            |
 | CLI-BE-001.1-S3      | Chapter 5 — InputParser, Chapter 8 — 8.4 Input Validation          | CLI-BE-001.1    | parse("q") returns action=quit                                              |
 | CLI-BE-001.1-S4      | Chapter 8 — 8.4 Input Validation, Chapter 10 QS-4                  | CLI-BE-001.1    | parse raises/returns error for invalid input; no domain call made           |
-| CLI-INFRA-001.1-S1   | Chapter 1 Quality Goal: Testability, Chapter 10 QS-3               | CLI-INFRA-001.1 | pytest discovers and runs all parser tests with zero I/O dependencies       |
-| CLI-INFRA-001.2-S1   | Chapter 8 — 8.2 Error Handling, Chapter 7 Deployment View          | CLI-INFRA-001.2 | EOF on stdin exits cleanly with code 0; no unhandled exception              |
+| CLI-INFRA-001.1-S1   | Chapter 8 — 8.2 Error Handling; Chapter 7 Deployment View — 7.3, 7.4 | CLI-INFRA-001.1 | EOF on stdin exits cleanly with code 0; no unhandled exception              |
+| CLI-INFRA-001.2-S1   | Chapter 7 Deployment View — 7.4 (Persistent storage: None)            | CLI-INFRA-001.2 | parsed command dispatched in-memory; no files created                       |
+| CLI-INFRA-001.3-S1   | Chapter 8 — 8.4 Input Validation; Chapter 5 — InputParser             | CLI-INFRA-001.3 | invalid input rejected at parser; no domain call made; usage hint shown     |
+| CLI-INFRA-001.4-S1   | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-4         | CLI-INFRA-001.4 | usage hint printed to stdout; prompt reappears after invalid input          |
+| CLI-INFRA-001.4-S2   | Chapter 8 — 8.3 Logging; Chapter 7 Deployment View — 7.3             | CLI-INFRA-001.4 | quit exits with code 0; final board or goodbye message visible on stdout    |

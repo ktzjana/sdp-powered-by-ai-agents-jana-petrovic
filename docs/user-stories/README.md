@@ -94,9 +94,9 @@ Together they exercise all three architectural layers (CLI → Game Controller �
 
 | Story Bundle      | Status       | File                                    |
 |-------------------|--------------|-----------------------------------------|
-| `BOARD-STORY-001` | ✅ Written   | `docs/user-stories/board.md`            |
-| `GAME-STORY-001`  | ✅ Written   | `docs/user-stories/game-reveal.md`      |
-| `GAME-STORY-002`  | ✅ Written   | `docs/user-stories/game-win-loss.md`    |
-| `GAME-STORY-003`  | ✅ Written   | `docs/user-stories/game-flag.md`        |
+| `BOARD-STORY-001` | ✅ Written   | `docs/user-stories/board-story-001.md`  |
+| `GAME-STORY-001`  | ✅ Written   | `docs/user-stories/game-story-001.md`   |
+| `GAME-STORY-002`  | ✅ Written   | `docs/user-stories/game-story-002.md`   |
+| `GAME-STORY-003`  | ✅ Written   | `docs/user-stories/game-story-003.md`   |
 | `CLI-STORY-001`   | ✅ Written   | `docs/user-stories/cli-story-001.md`    |
 | `CLI-STORY-002`   | ✅ Written   | `docs/user-stories/cli-story-002.md`    |

@@ -218,50 +218,24 @@
 
 ## INFRA Sub-Stories
 
-### BOARD-INFRA-001.1
+### BOARD-INFRA-001.1 — Deployment / Execution Environment
 
 **AS A** developer
-**I WANT** a pytest test suite for the Board and MinePlacer to run automatically
-**SO THAT** regressions in board initialisation and mine placement are caught early
+**I WANT** the game to launch with a single `python` command using only the stdlib
+**SO THAT** any machine with Python 3.10+ can run it without installation steps
 
-**Architecture Reference:** Chapter 1 Introduction and Goals — Quality Goal: Testability, Chapter 9 Architecture Decisions — ADR-001
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003
 
-#### BOARD-INFRA-001.1-S1: Board unit tests run via pytest
+#### BOARD-INFRA-001.1-S1: Game launches without third-party dependencies
 
 **GIVEN**
 
-* pytest is listed as a dev dependency in `pyproject.toml`
-* unit tests for `Board` and `MinePlacer` exist under `tests/`
-
-**WHEN**
-
-* `pytest` is executed from the project root
-
-**THEN**
-
-* all board-related tests are discovered and executed
-* any failing test causes the test run to report a non-zero exit code
-
----
-
-### BOARD-INFRA-001.2
-
-**AS A** developer
-**I WANT** the game to be runnable with a single command using only the Python stdlib
-**SO THAT** no installation steps are required beyond Python 3.10+
-
-**Architecture Reference:** Chapter 9 Architecture Decisions — ADR-003, Chapter 7 Deployment View
-
-#### BOARD-INFRA-001.2-S1: Game launches without third-party dependencies
-
-**GIVEN**
-
-* Python 3.10+ is installed
+* Python 3.10+ is installed on the host machine
 * no virtual environment or package installation has been performed
 
 **WHEN**
 
-* `python cli.py` is executed
+* `python minesweeper/cli.py` is executed from the project root
 
 **THEN**
 
@@ -270,28 +244,97 @@
 
 ---
 
-### BOARD-INFRA-001.3
+### BOARD-INFRA-001.2 — Data Store / State Persistence
 
 **AS A** developer
-**I WANT** basic logging during board initialization
-**SO THAT** errors in mine placement and setup can be diagnosed easily
+**I WANT** the board state to be held entirely in-memory for the duration of a game session
+**SO THAT** no file I/O or external storage is needed, consistent with the architecture
 
-**Architecture Reference:** Chapter 1 Quality Goal: Observability, Chapter 9 Architecture Decisions
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — Board, Cell
 
-#### BOARD-INFRA-001.3-S1: Board initialization logs are visible
+> **Applicability note:** The architecture explicitly states "Persistent storage: None". There is no save/load feature. Board state lives in the `Board` aggregate in memory and is discarded when the process exits. A dedicated persistence mechanism is therefore not applicable; this story documents and verifies that constraint.
+
+#### BOARD-INFRA-001.2-S1: Board state is not written to disk during a game session
 
 **GIVEN**
 
-* the game is started from the CLI
+* the game is started and a board is initialised
 
 **WHEN**
 
-* the board is initialized and mines are placed
+* the player reveals and flags several cells
 
 **THEN**
 
-* log messages indicate board creation and mine placement steps
-* any error during initialization is printed to stdout
+* no files are created or modified in the working directory
+* all state is held in the in-memory `Board` object
+
+---
+
+### BOARD-INFRA-001.3 — Event Handling / Integration Points
+
+**AS A** developer
+**I WANT** board initialisation to be triggered as a discrete startup event driven by CLI arguments
+**SO THAT** the seed and grid parameters are applied before the first player action
+
+**Architecture Reference:** Chapter 5 Building Block View — CLI, Game Controller; Chapter 9 Architecture Decisions — ADR-004; Chapter 6 Runtime View — 6.1 Scenario: Reveal a Cell
+
+#### BOARD-INFRA-001.3-S1: Board is initialised once at startup using CLI arguments
+
+**GIVEN**
+
+* the game is started with `python minesweeper/cli.py --seed 42`
+
+**WHEN**
+
+* the CLI entry point processes the `--seed` argument and constructs the `Board`
+
+**THEN**
+
+* `Board` is created exactly once before the game loop begins
+* the seed is applied to `random` before `MinePlacer` runs
+* the game loop does not re-initialise the board between turns
+
+---
+
+### BOARD-INFRA-001.4 — Monitoring / Observability
+
+**AS A** developer
+**I WANT** board initialisation failures and configuration errors to be reported clearly to stdout
+**SO THAT** misconfigured runs (e.g. more mines than cells) are diagnosable without a debugger
+
+**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 10 Quality Requirements — QS-4
+
+#### BOARD-INFRA-001.4-S1: Invalid board configuration prints a diagnostic and exits
+
+**GIVEN**
+
+* the game is started with a mine count greater than the number of cells (e.g. 30 mines on a 3 × 3 board)
+
+**WHEN**
+
+* `Board` or `MinePlacer` detects the invalid configuration
+
+**THEN**
+
+* a descriptive error message is printed to stdout (e.g. `"Error: mine count exceeds available cells"`)
+* the process exits with a non-zero exit code
+* no partial board state is left in memory
+
+#### BOARD-INFRA-001.4-S2: Successful board initialisation is confirmed on stdout
+
+**GIVEN**
+
+* the game is started with a valid configuration
+
+**WHEN**
+
+* board initialisation completes
+
+**THEN**
+
+* the initial board is rendered to stdout
+* no error or warning message appears before the first input prompt
 
 ---
 
@@ -299,11 +342,12 @@
 
 The story is implemented following the backend-first approach:
 
-1. **INFRA** — setup test environment, execution entry point, and logging
+1. **INFRA** — setup execution environment, verify state persistence constraint, wire startup event, and confirm observability
 
-   * BOARD-INFRA-001.1
-   * BOARD-INFRA-001.2
-   * BOARD-INFRA-001.3
+   * BOARD-INFRA-001.1 (deployment)
+   * BOARD-INFRA-001.2 (data store)
+   * BOARD-INFRA-001.3 (event handling)
+   * BOARD-INFRA-001.4 (monitoring / observability)
 
 2. **BE** — implement core domain logic and services
 
@@ -335,6 +379,8 @@ The story is implemented following the backend-first approach:
 | BOARD-BE-001.2-S2    | Chapter 9 ADR-004                                             | BOARD-BE-001.2    | same seed produces identical mine positions                           |
 | BOARD-BE-001.3-S1    | Chapter 5 Building Block View — MinePlacer, Cell              | BOARD-BE-001.3    | interior safe cell adjacent_count equals expected value               |
 | BOARD-BE-001.3-S2    | Chapter 5 Building Block View — MinePlacer, Cell              | BOARD-BE-001.3    | corner cell uses only valid in-bounds neighbours                      |
-| BOARD-INFRA-001.1-S1 | Chapter 1 Quality Goal: Testability, Chapter 9 ADR-001        | BOARD-INFRA-001.1 | pytest discovers and runs board tests; failures produce non-zero exit |
-| BOARD-INFRA-001.2-S1 | Chapter 9 ADR-003, Chapter 7 Deployment View                  | BOARD-INFRA-001.2 | game starts with `python cli.py` and no import errors occur           |
-| BOARD-INFRA-001.3-S1 | Chapter 1 Quality Goal: Observability                         | BOARD-INFRA-001.3 | initialization logs are printed and errors are visible                |
+| BOARD-INFRA-001.1-S1 | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003       | BOARD-INFRA-001.1 | game starts with `python minesweeper/cli.py`; no import errors        |
+| BOARD-INFRA-001.2-S1 | Chapter 7 Deployment View — 7.4 (Persistent storage: None)    | BOARD-INFRA-001.2 | no files created or modified during a game session                    |
+| BOARD-INFRA-001.3-S1 | Chapter 9 ADR-004; Chapter 6 Runtime View 6.1                 | BOARD-INFRA-001.3 | Board created once at startup; seed applied before MinePlacer runs    |
+| BOARD-INFRA-001.4-S1 | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-4 | BOARD-INFRA-001.4 | invalid config prints diagnostic and exits with non-zero code         |
+| BOARD-INFRA-001.4-S2 | Chapter 8 — 8.3 Logging; Chapter 10 QS-4                     | BOARD-INFRA-001.4 | valid init renders board; no error message before first prompt        |

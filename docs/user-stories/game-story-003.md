@@ -161,25 +161,122 @@
 
 ## INFRA Sub-Stories
 
-### GAME-INFRA-003.1
+### GAME-INFRA-003.1 — Deployment / Execution Environment
 
 **AS A** developer
-**I WANT** pytest tests for `toggle_flag` to run automatically
-**SO THAT** regressions in flag logic are caught immediately
+**I WANT** the flag command to work in the same single-command execution environment as all other commands
+**SO THAT** no additional setup is needed to exercise flag/unflag behaviour
 
-**Architecture Reference:** Chapter 1 Introduction and Goals — Quality Goal: Testability; Chapter 10 Quality Requirements — QS-3
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003, ADR-004
 
-#### GAME-INFRA-003.1-S1: Flag unit tests run via pytest with no I/O
+#### GAME-INFRA-003.1-S1: Flag command works in a reproducible seeded run
 
 **GIVEN**
-- unit tests for `Board.toggle_flag()` exist under `tests/`
+
+* Python 3.10+ is installed on the host machine
 
 **WHEN**
-- `pytest` is executed from the project root
+
+* `python minesweeper/cli.py --seed 42` is executed and the player enters `f 0 0`
 
 **THEN**
-- all flag-related tests are discovered and pass
-- no stdin/stdout is accessed during the test run
+
+* the flag is applied and the board re-renders with the flag marker at (0, 0)
+* no third-party packages are required
+
+---
+
+### GAME-INFRA-003.2 — Data Store / State Persistence
+
+**AS A** developer
+**I WANT** the flagged state of cells to be maintained entirely in-memory within the `Board` aggregate
+**SO THAT** no file I/O is needed to track flags between turns
+
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — Board, Cell
+
+> **Applicability note:** The architecture specifies no persistent storage. `Cell.flagged` lives in the in-memory `Board` aggregate and is not written to disk. This story verifies that constraint holds during the flag flow.
+
+#### GAME-INFRA-003.2-S1: Flag state is held in-memory and not persisted to disk
+
+**GIVEN**
+
+* the game is running and the player flags and unflags several cells
+
+**WHEN**
+
+* each `board.toggle_flag()` call completes
+
+**THEN**
+
+* `Cell.flagged` is updated in the in-memory `Board` object
+* no files are created or modified in the working directory
+
+---
+
+### GAME-INFRA-003.3 — Event Handling / Integration Points
+
+**AS A** developer
+**I WANT** each flag command to be processed as a discrete event dispatched through `InputParser` → `Game` → `Board.toggle_flag()`
+**SO THAT** the flag flow is traceable and invalid flag actions are handled at the correct layer
+
+**Architecture Reference:** Chapter 5 Building Block View — InputParser, Game, Board; Chapter 6 Runtime View — 6.2 Scenario: Flag a Cell; Chapter 8 Cross-cutting Concepts — 8.2 Error Handling
+
+#### GAME-INFRA-003.3-S1: Flag on an out-of-bounds cell is caught and re-prompted without crashing
+
+**GIVEN**
+
+* the game is running with a 5 × 5 board
+
+**WHEN**
+
+* the player enters `f 99 99`
+
+**THEN**
+
+* `InputParser` or `Game` catches the out-of-bounds condition
+* the CLI prints a usage hint
+* the game re-prompts for input
+* the process does not exit or raise an unhandled exception
+
+---
+
+### GAME-INFRA-003.4 — Monitoring / Observability
+
+**AS A** developer
+**I WANT** every flag and unflag action to produce a visible board re-render on stdout
+**SO THAT** the current flag state is always diagnosable without a debugger
+
+**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 5 Building Block View — BoardRenderer
+
+#### GAME-INFRA-003.4-S1: Flag action produces a visible board update on stdout
+
+**GIVEN**
+
+* the game is running
+
+**WHEN**
+
+* the player enters a valid flag command (e.g. `f 1 4`)
+
+**THEN**
+
+* the updated board is printed to stdout showing the flag marker at (1, 4)
+* no silent state change occurs without a corresponding board render
+
+#### GAME-INFRA-003.4-S2: Flag on a revealed cell produces a visible no-op message
+
+**GIVEN**
+
+* cell (2, 2) has already been revealed
+
+**WHEN**
+
+* the player enters `f 2 2`
+
+**THEN**
+
+* the CLI prints a message indicating the action was ignored (e.g. `"Cannot flag a revealed cell"`) or re-renders the unchanged board
+* the game re-prompts without crashing
 
 ---
 
@@ -196,4 +293,8 @@
 | GAME-BE-003.1-S1      | Chapter 5 Building Block View — Board, Chapter 6 6.2           | GAME-BE-003.1    | toggle_flag sets flagged=True on unflagged cell                       |
 | GAME-BE-003.1-S2      | Chapter 5 Building Block View — Board                           | GAME-BE-003.1    | toggle_flag sets flagged=False on flagged cell                        |
 | GAME-BE-003.2-S1      | Chapter 8 Cross-cutting Concepts — Error Handling               | GAME-BE-003.2    | toggle_flag on revealed cell is no-op; no exception                   |
-| GAME-INFRA-003.1-S1   | Chapter 1 Quality Goal: Testability, Chapter 10 QS-3           | GAME-INFRA-003.1 | pytest runs all flag tests with zero I/O dependencies                 |
+| GAME-INFRA-003.1-S1   | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003, ADR-004   | GAME-INFRA-003.1 | flag works in seeded run; no packages required                        |
+| GAME-INFRA-003.2-S1   | Chapter 7 Deployment View — 7.4 (Persistent storage: None)          | GAME-INFRA-003.2 | Cell.flagged updated in-memory; no files created during flag actions  |
+| GAME-INFRA-003.3-S1   | Chapter 8 — 8.2 Error Handling; Chapter 6 Runtime View 6.2          | GAME-INFRA-003.3 | out-of-bounds flag re-prompts; process stays alive                    |
+| GAME-INFRA-003.4-S1   | Chapter 8 — 8.3 Logging; Chapter 5 — BoardRenderer                  | GAME-INFRA-003.4 | flag action renders updated board; no silent state change             |
+| GAME-INFRA-003.4-S2   | Chapter 8 — 8.2 Error Handling, 8.3 Logging                         | GAME-INFRA-003.4 | flag on revealed cell shows message or re-renders; no crash           |

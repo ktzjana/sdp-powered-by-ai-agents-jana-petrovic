@@ -219,70 +219,124 @@
 
 ## INFRA Sub-Stories
 
-### GAME-INFRA-001.1
+### GAME-INFRA-001.1 — Deployment / Execution Environment
 
 **AS A** developer
-**I WANT** pytest tests for `RevealService` and `Game.reveal()` to run automatically
-**SO THAT** regressions in reveal logic and flood-fill are caught immediately
+**I WANT** the game to accept a `--seed` argument at the CLI entry point and run with a single command
+**SO THAT** reveal scenarios are reproducible in automated tests without any installation steps
 
-**Architecture Reference:** Chapter 1 Introduction and Goals — Quality Goal: Testability; Chapter 10 Quality Requirements — QS-1, QS-3
+**Architecture Reference:** Chapter 9 Architecture Decisions — ADR-004; Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements
 
-#### GAME-INFRA-001.1-S1: Reveal unit tests run via pytest with no I/O dependencies
+#### GAME-INFRA-001.1-S1: Game runs with a fixed seed from the CLI
 
 **GIVEN**
-- unit tests for `Board.reveal()`, `RevealService`, and `Game.reveal()` exist under `tests/`
+
+* Python 3.10+ is installed on the host machine
 
 **WHEN**
-- `pytest` is executed from the project root
+
+* `python minesweeper/cli.py --seed 42` is executed
 
 **THEN**
-- all reveal-related tests are discovered and pass
-- no stdin/stdout is accessed during the test run
+
+* the game starts with a deterministic board
+* the same mine positions appear on every run with `--seed 42`
+* no third-party packages are required
 
 ---
 
-### GAME-INFRA-001.2
+### GAME-INFRA-001.2 — Data Store / State Persistence
 
 **AS A** developer
-**I WANT** the game to accept a `--seed` argument at the CLI entry point
-**SO THAT** reveal scenarios are reproducible in automated tests
+**I WANT** the reveal state to be maintained entirely in-memory within the `Board` aggregate
+**SO THAT** no file I/O is needed between turns, consistent with the architecture
 
-**Architecture Reference:** Chapter 9 Architecture Decisions — ADR-004; Chapter 7 Deployment View
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — Board, Cell
 
-#### GAME-INFRA-001.2-S1: Game runs with a fixed seed from the CLI
+> **Applicability note:** The architecture specifies no persistent storage. Revealed cell state (`Cell.revealed`) lives in the in-memory `Board` aggregate and is not written to disk. This story verifies that constraint holds during the reveal flow.
+
+#### GAME-INFRA-001.2-S1: Reveal state is held in-memory and not persisted to disk
 
 **GIVEN**
-- Python 3.10+ is installed
+
+* the game is running and the player reveals several cells
 
 **WHEN**
-- `python minesweeper/cli.py --seed 42` is executed
+
+* each `board.reveal()` call completes
 
 **THEN**
-- the game starts with a deterministic board
-- the same mine positions appear on every run with `--seed 42`
+
+* `Cell.revealed` is updated in the in-memory `Board` object
+* no files are created or modified in the working directory
 
 ---
 
-### GAME-INFRA-001.3
+### GAME-INFRA-001.3 — Event Handling / Integration Points
 
 **AS A** developer
-**I WANT** invalid reveal coordinates to be caught and reported without crashing
-**SO THAT** the game loop remains robust during manual and automated play
+**I WANT** each player reveal command to be processed as a discrete event dispatched through `InputParser` → `Game` → `Board`
+**SO THAT** the reveal flow is traceable and each layer handles only its own responsibility
 
-**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling; Chapter 10 Quality Requirements — QS-4
+**Architecture Reference:** Chapter 5 Building Block View — InputParser, Game, RevealService; Chapter 6 Runtime View — 6.1 Scenario: Reveal a Cell; Chapter 8 Cross-cutting Concepts — 8.2 Error Handling
 
-#### GAME-INFRA-001.3-S1: Out-of-bounds reveal re-prompts without crashing
+#### GAME-INFRA-001.3-S1: Invalid reveal coordinates are caught and re-prompted without crashing
 
 **GIVEN**
-- the game is running with a 5 × 5 board
+
+* the game is running with a 5 × 5 board
 
 **WHEN**
-- the player enters `r 99 99`
+
+* the player enters `r 99 99`
 
 **THEN**
-- the CLI prints a usage hint
-- the game re-prompts for input
-- the process does not exit or raise an unhandled exception
+
+* `InputParser` or `Game` catches the out-of-bounds condition
+* the CLI prints a usage hint
+* the game re-prompts for input
+* the process does not exit or raise an unhandled exception
+
+---
+
+### GAME-INFRA-001.4 — Monitoring / Observability
+
+**AS A** developer
+**I WANT** the outcome of every reveal action (safe reveal, flood-fill, mine hit) to be visible on stdout
+**SO THAT** the game state is diagnosable at every step without a debugger
+
+**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 10 Quality Requirements — QS-1, QS-4
+
+#### GAME-INFRA-001.4-S1: Mine hit produces a visible diagnostic message before exit
+
+**GIVEN**
+
+* the game is running
+
+**WHEN**
+
+* the player reveals a mine cell
+
+**THEN**
+
+* `"BOOM! You hit a mine."` is printed to stdout
+* the board is rendered showing the mine position
+* the process exits cleanly with code 0
+
+#### GAME-INFRA-001.4-S2: Flood-fill result is visible in the re-rendered board
+
+**GIVEN**
+
+* the player reveals an empty cell that triggers flood-fill
+
+**WHEN**
+
+* `RevealService` completes the flood-fill
+
+**THEN**
+
+* the updated board is printed to stdout showing all newly revealed cells
+* no silent state change occurs without a corresponding board render
 
 ---
 
@@ -302,6 +356,8 @@
 | GAME-BE-001.2-S2      | Chapter 9 ADR-002                                                   | GAME-BE-001.2    | re-revealing an already-revealed cell is a no-op; no recursion error        |
 | GAME-BE-001.3-S1      | Chapter 5 Building Block View — Game, Chapter 6 Runtime View 6.3   | GAME-BE-001.3    | check_win() returns True when last safe cell is revealed                    |
 | GAME-BE-001.3-S2      | Chapter 5 Building Block View — Game                                | GAME-BE-001.3    | check_win() returns False when safe cells remain; loop continues            |
-| GAME-INFRA-001.1-S1   | Chapter 1 Quality Goal: Testability, Chapter 10 QS-3               | GAME-INFRA-001.1 | pytest runs all reveal tests with zero I/O dependencies                     |
-| GAME-INFRA-001.2-S1   | Chapter 9 ADR-004, Chapter 7 Deployment View                        | GAME-INFRA-001.2 | --seed 42 produces identical board on every run                             |
-| GAME-INFRA-001.3-S1   | Chapter 8 Error Handling, Chapter 10 QS-4                           | GAME-INFRA-001.3 | out-of-bounds input re-prompts; process stays alive                         |
+| GAME-INFRA-001.1-S1   | Chapter 9 ADR-004, Chapter 7 Deployment View — 7.3, 7.4        | GAME-INFRA-001.1 | --seed 42 produces identical board on every run; no packages required   |
+| GAME-INFRA-001.2-S1   | Chapter 7 Deployment View — 7.4 (Persistent storage: None)     | GAME-INFRA-001.2 | Cell.revealed updated in-memory; no files created during reveal         |
+| GAME-INFRA-001.3-S1   | Chapter 8 — 8.2 Error Handling, Chapter 10 QS-4                | GAME-INFRA-001.3 | out-of-bounds input re-prompts; process stays alive                     |
+| GAME-INFRA-001.4-S1   | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-1  | GAME-INFRA-001.4 | mine hit prints diagnostic and board; exits cleanly with code 0         |
+| GAME-INFRA-001.4-S2   | Chapter 8 — 8.3 Logging; Chapter 5 — BoardRenderer             | GAME-INFRA-001.4 | flood-fill result visible in re-rendered board; no silent state change  |
