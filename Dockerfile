@@ -5,6 +5,6 @@ WORKDIR /app
 COPY pyproject.toml .
 RUN pip install --no-cache-dir pytest
 
-COPY . .
+COPY tests/ tests/
 
-CMD ["python", "-m", "pytest", "tests/", "-v", "--tb=short"]
+CMD ["pytest", "tests/", "-v", "--tb=short"]
