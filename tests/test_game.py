@@ -52,3 +52,19 @@ def test_game_be_001_2_s1_flood_fill_reveals_connected_empty_cells():
     assert board.cell(2, 1).revealed is True
     # mine cell is NOT revealed
     assert board.cell(2, 2).revealed is False
+
+
+def test_game_be_001_2_s2_flood_fill_does_not_revisit_revealed_cells():
+    # GIVEN - cell (0, 0) has already been revealed
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(0, 0).revealed = True
+
+    # WHEN - board.reveal(0, 0) is called again
+    result = board.reveal(0, 0)
+
+    # THEN - board state is unchanged and no error occurs
+    assert result == RevealResult.OK
+    assert board.cell(0, 0).revealed is True
+    # all other cells remain unrevealed
+    assert board.cell(0, 1).revealed is False
+    assert board.cell(1, 0).revealed is False
