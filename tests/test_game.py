@@ -88,3 +88,19 @@ def test_game_be_001_3_s1_check_win_returns_true_after_last_safe_reveal():
     # THEN
     assert game.check_win() is True
     assert game.state == GameState.WIN
+
+
+def test_game_be_001_3_s2_check_win_returns_false_when_safe_cells_remain():
+    # GIVEN - a game where multiple safe cells are still unrevealed
+    # 2x2 board, 1 mine at (0,0); safe cells: (0,1),(1,0),(1,1)
+    board = Board(rows=2, cols=2, mines=0)
+    board.cell(0, 0).is_mine = True
+    board.compute_adjacent_counts()
+    game = Game(board)
+
+    # WHEN - only one safe cell is revealed
+    game.reveal(0, 1)
+
+    # THEN
+    assert game.check_win() is False
+    assert game.state == GameState.PLAYING
