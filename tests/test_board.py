@@ -63,3 +63,17 @@ def test_board_be_001_3_s1_interior_safe_cell_has_correct_adjacent_count():
 
     # THEN
     assert result == 2
+
+
+def test_board_be_001_3_s2_corner_safe_cell_considers_only_valid_neighbours():
+    # GIVEN - a 3x3 board where only (0,1) is a mine;
+    # corner cell (0,0) has exactly 1 valid neighbour that is a mine
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(0, 1).is_mine = True
+    board.compute_adjacent_counts()
+
+    # WHEN
+    result = board.cell(0, 0).adjacent_count
+
+    # THEN - only in-bounds neighbours are counted; no IndexError or over-count
+    assert result == 1
