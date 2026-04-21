@@ -1,4 +1,5 @@
 from minesweeper.board import Board, RevealResult
+from minesweeper.game import Game, GameState
 
 
 def test_game_be_001_1_s1_reveal_mine_returns_mine_hit():
@@ -68,3 +69,22 @@ def test_game_be_001_2_s2_flood_fill_does_not_revisit_revealed_cells():
     # all other cells remain unrevealed
     assert board.cell(0, 1).revealed is False
     assert board.cell(1, 0).revealed is False
+
+
+def test_game_be_001_3_s1_check_win_returns_true_after_last_safe_reveal():
+    # GIVEN - a game with one safe cell remaining unrevealed
+    # 2x2 board, 1 mine at (0,0); safe cells: (0,1),(1,0),(1,1)
+    board = Board(rows=2, cols=2, mines=0)
+    board.cell(0, 0).is_mine = True
+    board.compute_adjacent_counts()
+    game = Game(board)
+    # reveal all safe cells except (1, 1)
+    game.reveal(0, 1)
+    game.reveal(1, 0)
+
+    # WHEN - the last safe cell is revealed
+    game.reveal(1, 1)
+
+    # THEN
+    assert game.check_win() is True
+    assert game.state == GameState.WIN
