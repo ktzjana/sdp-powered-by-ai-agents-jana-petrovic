@@ -154,121 +154,124 @@
 
 ## INFRA Sub-Stories
 
-### CLI-INFRA-002.1 — Deployment / Execution Environment
+### CLI-INFRA-002.1 — Dockerfile Build
 
 **AS A** developer
-**I WANT** the board renderer to produce correct output in the same single-command execution environment
-**SO THAT** rendering works on any OS with Python 3.10+ without additional dependencies
+**I WANT** the project to build successfully inside a Docker container
+**SO THAT** board rendering can be tested in a reproducible containerised environment
 
 **Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003
 
-#### CLI-INFRA-002.1-S1: BoardRenderer produces correct output with no third-party packages
+#### CLI-INFRA-002.1-S1: Dockerfile builds without errors
 
 **GIVEN**
 
-* Python 3.10+ is installed on the host machine
-* no virtual environment or package installation has been performed
+* a `Dockerfile` exists at the project root
+* the `Dockerfile` uses a `python:3.10` (or later) base image
+* the project source is copied into the image
 
 **WHEN**
 
-* `python minesweeper/cli.py` is executed and the board is rendered
+* `docker build -t minesweeper .` is executed from the project root
 
 **THEN**
 
-* the ASCII grid is printed to stdout correctly
-* no import errors or missing-dependency errors occur
+* the build completes with exit code 0
+* no build errors or missing-file errors are reported
 
 ---
 
-### CLI-INFRA-002.2 — Data Store / State Persistence
+### CLI-INFRA-002.2 — Dependency Installation Inside Container
 
 **AS A** developer
-**I WANT** `BoardRenderer` to read board state directly from the in-memory `Board` object on every render
-**SO THAT** no intermediate file or cache is needed to produce the display
+**I WANT** all required dependencies to be installed correctly inside the Docker container
+**SO THAT** the board rendering test suite can run without missing-module errors
 
-**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — BoardRenderer, Board
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements; Chapter 2 Architecture Constraints — TC-4
 
-> **Applicability note:** The architecture specifies no persistent storage. `BoardRenderer` reads `Cell` state directly from the in-memory `Board` aggregate on each call. There is no render cache or output file. This story verifies that constraint holds in the rendering path.
+> **Applicability note:** The architecture specifies stdlib-only runtime dependencies (TC-4). The container must still install `pytest` for test execution. No other third-party packages are required.
 
-#### CLI-INFRA-002.2-S1: Renderer reads board state in-memory without disk I/O
+#### CLI-INFRA-002.2-S1: pytest is available inside the container after build
 
 **GIVEN**
 
-* the game is running and the board has been updated by a reveal or flag action
+* the Docker image has been built successfully
 
 **WHEN**
 
-* `BoardRenderer.render(board)` is called
+* `docker run minesweeper pytest --version` is executed
 
 **THEN**
 
-* the rendered output reflects the current in-memory `Board` state
-* no files are read from or written to disk during rendering
+* pytest reports its version and exits with code 0
+* no `ModuleNotFoundError` is raised
 
 ---
 
-### CLI-INFRA-002.3 — Event Handling / Integration Points
+### CLI-INFRA-002.3 — Project Build Inside Container
 
 **AS A** developer
-**I WANT** `BoardRenderer` to be invoked automatically after every game action that changes board state
-**SO THAT** the player always sees an up-to-date view without having to request a refresh
+**I WANT** the project to be importable and executable inside the Docker container
+**SO THAT** rendering flows can be exercised without host-machine Python
 
-**Architecture Reference:** Chapter 5 Building Block View — BoardRenderer, Game; Chapter 6 Runtime View — 6.1 Scenario: Reveal a Cell, 6.2 Scenario: Flag a Cell
+**Architecture Reference:** Chapter 5 Building Block View — BoardRenderer; Chapter 7 Deployment View — 7.3 How to Run
 
-#### CLI-INFRA-002.3-S1: Renderer is called after every state-changing action
+#### CLI-INFRA-002.3-S1: Game launches inside the container without import errors
 
 **GIVEN**
 
-* the game is running
+* the Docker image has been built successfully
 
 **WHEN**
 
-* the player enters a valid reveal or flag command
+* `docker run minesweeper python minesweeper/cli.py --help` (or equivalent smoke-run with piped EOF) is executed
 
 **THEN**
 
-* `BoardRenderer.render(board)` is called once after the action completes
-* the updated board appears on stdout before the next input prompt
+* the process exits with code 0
+* no `ImportError` or `ModuleNotFoundError` is printed to stdout or stderr
 
 ---
 
-### CLI-INFRA-002.4 — Monitoring / Observability
+### CLI-INFRA-002.4 — Test Suite Execution via pytest Inside Container
 
 **AS A** developer
-**I WANT** rendering errors (e.g. unexpected cell state) to produce a visible diagnostic on stdout rather than a silent crash
-**SO THAT** display bugs are immediately visible during development and manual testing
+**I WANT** the full test suite to run successfully inside the Docker container via pytest
+**SO THAT** board rendering logic is verified in the containerised environment
 
-**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 10 Quality Requirements — QS-4
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run; Chapter 2 Architecture Constraints — OC-2; Chapter 5 Building Block View — BoardRenderer
 
-#### CLI-INFRA-002.4-S1: Renderer uses distinct, unambiguous symbols for all cell states
-
-**GIVEN**
-
-* a board containing hidden, flagged, revealed-numbered, and revealed-empty cells
-
-**WHEN**
-
-* `BoardRenderer.render(board)` is called
-
-**THEN**
-
-* each cell state maps to a distinct symbol (e.g. `.` hidden, `F` flagged, digit for numbered, ` ` or `0` for empty)
-* no cell renders as an empty string or whitespace that could be confused with another state
-
-#### CLI-INFRA-002.4-S2: Renderer output is written to stdout and is immediately visible
+#### CLI-INFRA-002.4-S1: pytest discovers and runs rendering tests inside the container
 
 **GIVEN**
 
-* the game is running
+* the Docker image has been built successfully
+* test files for board rendering exist under a `tests/` directory at the project root
 
 **WHEN**
 
-* `BoardRenderer.render(board)` is called after any action
+* `docker run minesweeper pytest tests/` is executed
 
 **THEN**
 
-* the rendered board is flushed to stdout before the next input prompt
-* no buffering delay causes the board to appear after the prompt
+* pytest discovers at least the rendering test files
+* all discovered tests pass
+* pytest exits with code 0
+
+#### CLI-INFRA-002.4-S2: Repository structure supports pytest discovery inside Docker
+
+**GIVEN**
+
+* the Docker image has been built and the working directory is set to the project root inside the container
+
+**WHEN**
+
+* `docker run minesweeper pytest --collect-only` is executed
+
+**THEN**
+
+* pytest collects test items without "no tests ran" or collection errors
+* the collected items include board rendering tests
 
 ---
 
@@ -285,8 +288,8 @@
 | CLI-FE-002.1-S2      | Chapter 5 — BoardRenderer, Chapter 6 Runtime View 6.2              | CLI-FE-002.1    | updated board printed to stdout after flag, before next prompt            |
 | CLI-BE-002.1-S1      | Chapter 5 — BoardRenderer, Chapter 9 ADR-001                       | CLI-BE-002.1    | render output has correct row and column count                            |
 | CLI-BE-002.1-S2      | Chapter 5 — BoardRenderer, Cell                                     | CLI-BE-002.1    | hidden/flagged/revealed cells use distinct symbols                        |
-| CLI-INFRA-002.1-S1   | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003             | CLI-INFRA-002.1 | renderer produces correct ASCII output; no packages required              |
-| CLI-INFRA-002.2-S1   | Chapter 7 Deployment View — 7.4 (Persistent storage: None)          | CLI-INFRA-002.2 | renderer reads in-memory Board; no disk I/O during rendering              |
-| CLI-INFRA-002.3-S1   | Chapter 5 — BoardRenderer, Game; Chapter 6 Runtime View 6.1, 6.2   | CLI-INFRA-002.3 | render called once after each action; board visible before next prompt    |
-| CLI-INFRA-002.4-S1   | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-4       | CLI-INFRA-002.4 | each cell state maps to a distinct unambiguous symbol                     |
-| CLI-INFRA-002.4-S2   | Chapter 8 — 8.3 Logging; Chapter 5 — BoardRenderer                 | CLI-INFRA-002.4 | board flushed to stdout before next prompt; no buffering delay            |
+| CLI-INFRA-002.1-S1   | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003          | CLI-INFRA-002.1 | `docker build` completes with exit code 0; no build errors              |
+| CLI-INFRA-002.2-S1   | Chapter 7 Deployment View — 7.4; Chapter 2 TC-4                  | CLI-INFRA-002.2 | `pytest --version` succeeds inside container; no ModuleNotFoundError    |
+| CLI-INFRA-002.3-S1   | Chapter 5 Building Block View — BoardRenderer; Chapter 7 — 7.3  | CLI-INFRA-002.3 | game launches inside container; no ImportError                          |
+| CLI-INFRA-002.4-S1   | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — BoardRenderer      | CLI-INFRA-002.4 | pytest discovers and passes rendering tests inside container            |
+| CLI-INFRA-002.4-S2   | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — BoardRenderer      | CLI-INFRA-002.4 | `pytest --collect-only` collects rendering tests without errors         |

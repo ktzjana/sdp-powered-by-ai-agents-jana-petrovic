@@ -203,140 +203,124 @@
 
 ## INFRA Sub-Stories
 
-### GAME-INFRA-002.1 — Deployment / Execution Environment
+### GAME-INFRA-002.1 — Dockerfile Build
 
 **AS A** developer
-**I WANT** the process to exit with code 0 on both win and loss outcomes
-**SO THAT** automated test runners can verify the game completed without errors
+**I WANT** the project to build successfully inside a Docker container
+**SO THAT** win/loss detection can be tested in a reproducible containerised environment
 
-**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run; Chapter 9 Architecture Decisions — ADR-003
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003
 
-#### GAME-INFRA-002.1-S1: Process exits cleanly after win
+#### GAME-INFRA-002.1-S1: Dockerfile builds without errors
 
 **GIVEN**
 
-* the game is run with `python minesweeper/cli.py --seed 7`
-* the player reveals all safe cells
+* a `Dockerfile` exists at the project root
+* the `Dockerfile` uses a `python:3.10` (or later) base image
+* the project source is copied into the image
 
 **WHEN**
 
-* the win condition is triggered
+* `docker build -t minesweeper .` is executed from the project root
+
+**THEN**
+
+* the build completes with exit code 0
+* no build errors or missing-file errors are reported
+
+---
+
+### GAME-INFRA-002.2 — Dependency Installation Inside Container
+
+**AS A** developer
+**I WANT** all required dependencies to be installed correctly inside the Docker container
+**SO THAT** the win/loss test suite can run without missing-module errors
+
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements; Chapter 2 Architecture Constraints — TC-4
+
+> **Applicability note:** The architecture specifies stdlib-only runtime dependencies (TC-4). The container must still install `pytest` for test execution. No other third-party packages are required.
+
+#### GAME-INFRA-002.2-S1: pytest is available inside the container after build
+
+**GIVEN**
+
+* the Docker image has been built successfully
+
+**WHEN**
+
+* `docker run minesweeper pytest --version` is executed
+
+**THEN**
+
+* pytest reports its version and exits with code 0
+* no `ModuleNotFoundError` is raised
+
+---
+
+### GAME-INFRA-002.3 — Project Build Inside Container
+
+**AS A** developer
+**I WANT** the project to be importable and executable inside the Docker container
+**SO THAT** win/loss flows can be exercised without host-machine Python
+
+**Architecture Reference:** Chapter 5 Building Block View — Game; Chapter 7 Deployment View — 7.3 How to Run
+
+#### GAME-INFRA-002.3-S1: Game launches inside the container without import errors
+
+**GIVEN**
+
+* the Docker image has been built successfully
+
+**WHEN**
+
+* `docker run minesweeper python minesweeper/cli.py --help` (or equivalent smoke-run with piped EOF) is executed
 
 **THEN**
 
 * the process exits with code 0
-* `"You win!"` was printed before exit
-
-#### GAME-INFRA-002.1-S2: Process exits cleanly after loss
-
-**GIVEN**
-
-* the game is run with `python minesweeper/cli.py --seed 7`
-* the player reveals a mine
-
-**WHEN**
-
-* the loss condition is triggered
-
-**THEN**
-
-* the process exits with code 0
-* `"BOOM! You hit a mine."` was printed before exit
+* no `ImportError` or `ModuleNotFoundError` is printed to stdout or stderr
 
 ---
 
-### GAME-INFRA-002.2 — Data Store / State Persistence
+### GAME-INFRA-002.4 — Test Suite Execution via pytest Inside Container
 
 **AS A** developer
-**I WANT** the game state (including win/loss status) to be held entirely in-memory
-**SO THAT** no file I/O is needed to track or persist the game outcome
+**I WANT** the full test suite to run successfully inside the Docker container via pytest
+**SO THAT** win/loss detection logic is verified in the containerised environment
 
-**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — Game, Board
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run; Chapter 2 Architecture Constraints — OC-2; Chapter 5 Building Block View — Game
 
-> **Applicability note:** The architecture specifies no persistent storage. `Game.state` (WIN / LOSS / IN_PROGRESS) lives in the in-memory `Game` object. There is no save/resume feature. This story verifies that the win/loss state is never written to disk.
-
-#### GAME-INFRA-002.2-S1: Win/loss state is not written to disk
+#### GAME-INFRA-002.4-S1: pytest discovers and runs win/loss tests inside the container
 
 **GIVEN**
 
-* the game is running and the player triggers a win or loss condition
+* the Docker image has been built successfully
+* test files for win/loss detection exist under a `tests/` directory at the project root
 
 **WHEN**
 
-* `Game` transitions to WIN or LOSS state
+* `docker run minesweeper pytest tests/` is executed
 
 **THEN**
 
-* no files are created or modified in the working directory
-* the outcome is communicated solely via stdout and process exit code
+* pytest discovers at least the win/loss-related test files
+* all discovered tests pass
+* pytest exits with code 0
 
----
-
-### GAME-INFRA-002.3 — Event Handling / Integration Points
-
-**AS A** developer
-**I WANT** win and loss conditions to be evaluated as discrete post-action events after every reveal
-**SO THAT** the game loop terminates correctly and no further input is accepted after a terminal state
-
-**Architecture Reference:** Chapter 5 Building Block View — Game; Chapter 6 Runtime View — 6.1 Scenario: Reveal a Cell, 6.3 Scenario: Win Condition
-
-#### GAME-INFRA-002.3-S1: Game loop stops accepting input after a terminal state is reached
+#### GAME-INFRA-002.4-S2: Repository structure supports pytest discovery inside Docker
 
 **GIVEN**
 
-* the game has transitioned to WIN or LOSS state
+* the Docker image has been built and the working directory is set to the project root inside the container
 
 **WHEN**
 
-* the game loop evaluates the next iteration
+* `docker run minesweeper pytest --collect-only` is executed
 
 **THEN**
 
-* no input prompt is shown
-* `Game.reveal()` rejects or no-ops any further calls
-* the process exits cleanly
-
----
-
-### GAME-INFRA-002.4 — Monitoring / Observability
-
-**AS A** developer
-**I WANT** the win and loss outcomes to produce distinct, visible messages on stdout
-**SO THAT** the game result is unambiguous and diagnosable in both manual and automated runs
-
-**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 10 Quality Requirements — QS-1, QS-2
-
-#### GAME-INFRA-002.4-S1: Win outcome is confirmed with a visible message and final board state
-
-**GIVEN**
-
-* the player has just revealed the last safe cell
-
-**WHEN**
-
-* `Game` signals the win condition to the CLI
-
-**THEN**
-
-* the final board is rendered to stdout
-* `"You win!"` is printed after the board render
-* no further input prompt appears
-
-#### GAME-INFRA-002.4-S2: Loss outcome is confirmed with a visible message and mine position visible
-
-**GIVEN**
-
-* the player has just revealed a mine
-
-**WHEN**
-
-* `Game` signals the loss condition to the CLI
-
-**THEN**
-
-* `"BOOM! You hit a mine."` is printed to stdout
-* the board is rendered showing the triggered mine position
-* no further input prompt appears
+* pytest collects test items without "no tests ran" or collection errors
+* the collected items include win/loss detection tests
 
 ---
 
@@ -355,9 +339,8 @@
 | GAME-BE-002.2-S1      | Chapter 5 Building Block View — Game, Chapter 10 QS-1              | GAME-BE-002.2    | game.state == LOSS after MINE_HIT; further reveals rejected               |
 | GAME-BE-002.2-S2      | Chapter 6 Runtime View 6.3                                          | GAME-BE-002.2    | game.state == WIN after check_win passes                                  |
 | GAME-BE-002.3-S1      | Chapter 5 Building Block View — Cell, Chapter 12 Glossary          | GAME-BE-002.3    | flagged-but-unrevealed safe cell keeps check_win() returning False        |
-| GAME-INFRA-002.1-S1   | Chapter 7 Deployment View — 7.3; Chapter 9 ADR-003                  | GAME-INFRA-002.1 | process exits 0 after win; "You win!" in stdout                           |
-| GAME-INFRA-002.1-S2   | Chapter 7 Deployment View — 7.3; Chapter 9 ADR-003                  | GAME-INFRA-002.1 | process exits 0 after loss; "BOOM!" in stdout                             |
-| GAME-INFRA-002.2-S1   | Chapter 7 Deployment View — 7.4 (Persistent storage: None)          | GAME-INFRA-002.2 | no files created on win/loss; outcome via stdout and exit code only       |
-| GAME-INFRA-002.3-S1   | Chapter 5 Building Block View — Game; Chapter 6 Runtime View 6.3    | GAME-INFRA-002.3 | game loop stops; no prompt shown; further reveals rejected after terminal |
-| GAME-INFRA-002.4-S1   | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-2       | GAME-INFRA-002.4 | final board rendered; "You win!" printed; no further prompt               |
-| GAME-INFRA-002.4-S2   | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-1       | GAME-INFRA-002.4 | board rendered with mine visible; "BOOM!" printed; no further prompt      |
+| GAME-INFRA-002.1-S1   | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003         | GAME-INFRA-002.1 | `docker build` completes with exit code 0; no build errors              |
+| GAME-INFRA-002.2-S1   | Chapter 7 Deployment View — 7.4; Chapter 2 TC-4                 | GAME-INFRA-002.2 | `pytest --version` succeeds inside container; no ModuleNotFoundError    |
+| GAME-INFRA-002.3-S1   | Chapter 5 Building Block View — Game; Chapter 7 — 7.3           | GAME-INFRA-002.3 | game launches inside container; no ImportError                          |
+| GAME-INFRA-002.4-S1   | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — Game              | GAME-INFRA-002.4 | pytest discovers and passes win/loss tests inside container             |
+| GAME-INFRA-002.4-S2   | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — Game              | GAME-INFRA-002.4 | `pytest --collect-only` collects win/loss tests without errors          |

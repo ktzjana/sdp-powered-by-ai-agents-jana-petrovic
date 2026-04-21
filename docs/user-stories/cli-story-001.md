@@ -184,121 +184,124 @@
 
 ## INFRA Sub-Stories
 
-### CLI-INFRA-001.1 — Deployment / Execution Environment
+### CLI-INFRA-001.1 — Dockerfile Build
 
 **AS A** developer
-**I WANT** the game to handle `EOF` on stdin gracefully and run with a single command
-**SO THAT** automated piped-input tests do not leave the process hanging and no installation is needed
+**I WANT** the project to build successfully inside a Docker container
+**SO THAT** input parsing can be tested in a reproducible containerised environment
 
-**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling; Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003
 
-#### CLI-INFRA-001.1-S1: EOF on stdin exits the game cleanly
+#### CLI-INFRA-001.1-S1: Dockerfile builds without errors
 
 **GIVEN**
 
-* the game is started and stdin reaches EOF (e.g. piped input ends)
+* a `Dockerfile` exists at the project root
+* the `Dockerfile` uses a `python:3.10` (or later) base image
+* the project source is copied into the image
 
 **WHEN**
 
-* the game loop attempts to read the next command
+* `docker build -t minesweeper .` is executed from the project root
+
+**THEN**
+
+* the build completes with exit code 0
+* no build errors or missing-file errors are reported
+
+---
+
+### CLI-INFRA-001.2 — Dependency Installation Inside Container
+
+**AS A** developer
+**I WANT** all required dependencies to be installed correctly inside the Docker container
+**SO THAT** the input parsing test suite can run without missing-module errors
+
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements; Chapter 2 Architecture Constraints — TC-4
+
+> **Applicability note:** The architecture specifies stdlib-only runtime dependencies (TC-4). The container must still install `pytest` for test execution. No other third-party packages are required.
+
+#### CLI-INFRA-001.2-S1: pytest is available inside the container after build
+
+**GIVEN**
+
+* the Docker image has been built successfully
+
+**WHEN**
+
+* `docker run minesweeper pytest --version` is executed
+
+**THEN**
+
+* pytest reports its version and exits with code 0
+* no `ModuleNotFoundError` is raised
+
+---
+
+### CLI-INFRA-001.3 — Project Build Inside Container
+
+**AS A** developer
+**I WANT** the project to be importable and executable inside the Docker container
+**SO THAT** CLI input flows can be exercised without host-machine Python
+
+**Architecture Reference:** Chapter 5 Building Block View — InputParser, CLI; Chapter 7 Deployment View — 7.3 How to Run
+
+#### CLI-INFRA-001.3-S1: Game launches inside the container without import errors
+
+**GIVEN**
+
+* the Docker image has been built successfully
+
+**WHEN**
+
+* `docker run minesweeper python minesweeper/cli.py --help` (or equivalent smoke-run with piped EOF) is executed
 
 **THEN**
 
 * the process exits with code 0
-* no unhandled exception is raised
+* no `ImportError` or `ModuleNotFoundError` is printed to stdout or stderr
 
 ---
 
-### CLI-INFRA-001.2 — Data Store / State Persistence
+### CLI-INFRA-001.4 — Test Suite Execution via pytest Inside Container
 
 **AS A** developer
-**I WANT** the parsed command to be dispatched directly to the in-memory `Game` object without any intermediate storage
-**SO THAT** no file I/O is introduced in the input-handling path
+**I WANT** the full test suite to run successfully inside the Docker container via pytest
+**SO THAT** input parsing logic is verified in the containerised environment
 
-**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — InputParser, Game
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run; Chapter 2 Architecture Constraints — OC-2; Chapter 5 Building Block View — InputParser
 
-> **Applicability note:** The architecture specifies no persistent storage. Parsed commands are transient values passed directly to `Game`; they are never written to disk or queued in a file. This story verifies that constraint holds in the CLI input path.
-
-#### CLI-INFRA-001.2-S1: Parsed commands are dispatched in-memory without disk I/O
+#### CLI-INFRA-001.4-S1: pytest discovers and runs input parsing tests inside the container
 
 **GIVEN**
 
-* the game is running and the player enters `r 2 3`
+* the Docker image has been built successfully
+* test files for input parsing exist under a `tests/` directory at the project root
 
 **WHEN**
 
-* `InputParser.parse()` returns the reveal command and the CLI dispatches it to `Game`
+* `docker run minesweeper pytest tests/` is executed
 
 **THEN**
 
-* `Game.reveal(2, 3)` is called directly in-memory
-* no files are created or modified in the working directory
+* pytest discovers at least the input parsing test files
+* all discovered tests pass
+* pytest exits with code 0
 
----
-
-### CLI-INFRA-001.3 — Event Handling / Integration Points
-
-**AS A** developer
-**I WANT** each player input to be processed as a discrete event through `InputParser` → `Game` with clear error boundaries
-**SO THAT** invalid input is rejected at the parser layer before any domain call is made
-
-**Architecture Reference:** Chapter 5 Building Block View — InputParser, Game; Chapter 8 Cross-cutting Concepts — 8.4 Input Validation; Chapter 6 Runtime View — 6.1, 6.2
-
-#### CLI-INFRA-001.3-S1: Invalid input is rejected at the parser layer with no domain side-effects
+#### CLI-INFRA-001.4-S2: Repository structure supports pytest discovery inside Docker
 
 **GIVEN**
 
-* the game is running
+* the Docker image has been built and the working directory is set to the project root inside the container
 
 **WHEN**
 
-* the player enters `xyz` or `r abc`
+* `docker run minesweeper pytest --collect-only` is executed
 
 **THEN**
 
-* `InputParser.parse()` signals a parse error before any `Game` method is called
-* the CLI prints a usage hint and re-prompts
-* no domain state is mutated
-
----
-
-### CLI-INFRA-001.4 — Monitoring / Observability
-
-**AS A** developer
-**I WANT** every command outcome (valid dispatch, parse error, quit) to produce a visible response on stdout
-**SO THAT** the CLI interaction is fully diagnosable without a debugger
-
-**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 10 Quality Requirements — QS-4
-
-#### CLI-INFRA-001.4-S1: Parse error produces a visible usage hint on stdout
-
-**GIVEN**
-
-* the game is running
-
-**WHEN**
-
-* the player enters an unrecognised command
-
-**THEN**
-
-* a usage hint (e.g. `"Usage: r <row> <col> | f <row> <col> | q"`) is printed to stdout
-* the input prompt reappears immediately after
-
-#### CLI-INFRA-001.4-S2: Quit command produces a visible confirmation before exit
-
-**GIVEN**
-
-* the game is running
-
-**WHEN**
-
-* the player enters `q`
-
-**THEN**
-
-* the game loop exits and the process terminates with code 0
-* stdout contains at least the final board state or a goodbye message before exit
+* pytest collects test items without "no tests ran" or collection errors
+* the collected items include input parsing tests
 
 ---
 
@@ -317,8 +320,8 @@
 | CLI-BE-001.1-S2      | Chapter 5 — InputParser                                             | CLI-BE-001.1    | parse("f 1 4") returns action=flag, row=1, col=4                            |
 | CLI-BE-001.1-S3      | Chapter 5 — InputParser, Chapter 8 — 8.4 Input Validation          | CLI-BE-001.1    | parse("q") returns action=quit                                              |
 | CLI-BE-001.1-S4      | Chapter 8 — 8.4 Input Validation, Chapter 10 QS-4                  | CLI-BE-001.1    | parse raises/returns error for invalid input; no domain call made           |
-| CLI-INFRA-001.1-S1   | Chapter 8 — 8.2 Error Handling; Chapter 7 Deployment View — 7.3, 7.4 | CLI-INFRA-001.1 | EOF on stdin exits cleanly with code 0; no unhandled exception              |
-| CLI-INFRA-001.2-S1   | Chapter 7 Deployment View — 7.4 (Persistent storage: None)            | CLI-INFRA-001.2 | parsed command dispatched in-memory; no files created                       |
-| CLI-INFRA-001.3-S1   | Chapter 8 — 8.4 Input Validation; Chapter 5 — InputParser             | CLI-INFRA-001.3 | invalid input rejected at parser; no domain call made; usage hint shown     |
-| CLI-INFRA-001.4-S1   | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-4         | CLI-INFRA-001.4 | usage hint printed to stdout; prompt reappears after invalid input          |
-| CLI-INFRA-001.4-S2   | Chapter 8 — 8.3 Logging; Chapter 7 Deployment View — 7.3             | CLI-INFRA-001.4 | quit exits with code 0; final board or goodbye message visible on stdout    |
+| CLI-INFRA-001.1-S1   | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003          | CLI-INFRA-001.1 | `docker build` completes with exit code 0; no build errors              |
+| CLI-INFRA-001.2-S1   | Chapter 7 Deployment View — 7.4; Chapter 2 TC-4                  | CLI-INFRA-001.2 | `pytest --version` succeeds inside container; no ModuleNotFoundError    |
+| CLI-INFRA-001.3-S1   | Chapter 5 Building Block View — InputParser, CLI; Chapter 7 — 7.3 | CLI-INFRA-001.3 | game launches inside container; no ImportError                         |
+| CLI-INFRA-001.4-S1   | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — InputParser        | CLI-INFRA-001.4 | pytest discovers and passes input parsing tests inside container        |
+| CLI-INFRA-001.4-S2   | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — InputParser        | CLI-INFRA-001.4 | `pytest --collect-only` collects input parsing tests without errors     |

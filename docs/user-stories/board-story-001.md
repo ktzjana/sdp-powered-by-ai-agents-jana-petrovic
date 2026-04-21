@@ -218,123 +218,124 @@
 
 ## INFRA Sub-Stories
 
-### BOARD-INFRA-001.1 — Deployment / Execution Environment
+### BOARD-INFRA-001.1 — Dockerfile Build
 
 **AS A** developer
-**I WANT** the game to launch with a single `python` command using only the stdlib
-**SO THAT** any machine with Python 3.10+ can run it without installation steps
+**I WANT** the project to build successfully inside a Docker container
+**SO THAT** the execution environment is reproducible on any machine with Docker installed
 
 **Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003
 
-#### BOARD-INFRA-001.1-S1: Game launches without third-party dependencies
+#### BOARD-INFRA-001.1-S1: Dockerfile builds without errors
 
 **GIVEN**
 
-* Python 3.10+ is installed on the host machine
-* no virtual environment or package installation has been performed
+* a `Dockerfile` exists at the project root
+* the `Dockerfile` uses a `python:3.10` (or later) base image
+* the project source is copied into the image
 
 **WHEN**
 
-* `python minesweeper/cli.py` is executed from the project root
+* `docker build -t minesweeper .` is executed from the project root
 
 **THEN**
 
-* the game starts and displays the initial board
-* no import errors or missing-dependency errors occur
+* the build completes with exit code 0
+* no build errors or missing-file errors are reported
 
 ---
 
-### BOARD-INFRA-001.2 — Data Store / State Persistence
+### BOARD-INFRA-001.2 — Dependency Installation Inside Container
 
 **AS A** developer
-**I WANT** the board state to be held entirely in-memory for the duration of a game session
-**SO THAT** no file I/O or external storage is needed, consistent with the architecture
+**I WANT** all required dependencies to be installed correctly inside the Docker container
+**SO THAT** the application and test suite can run without missing-module errors
 
-**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — Board, Cell
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements; Chapter 2 Architecture Constraints — TC-4
 
-> **Applicability note:** The architecture explicitly states "Persistent storage: None". There is no save/load feature. Board state lives in the `Board` aggregate in memory and is discarded when the process exits. A dedicated persistence mechanism is therefore not applicable; this story documents and verifies that constraint.
+> **Applicability note:** The architecture specifies stdlib-only runtime dependencies (TC-4). The container must still install `pytest` for test execution. No other third-party packages are required.
 
-#### BOARD-INFRA-001.2-S1: Board state is not written to disk during a game session
+#### BOARD-INFRA-001.2-S1: pytest is available inside the container after build
 
 **GIVEN**
 
-* the game is started and a board is initialised
+* the Docker image has been built successfully
 
 **WHEN**
 
-* the player reveals and flags several cells
+* `docker run minesweeper pytest --version` is executed
 
 **THEN**
 
-* no files are created or modified in the working directory
-* all state is held in the in-memory `Board` object
+* pytest reports its version and exits with code 0
+* no `ModuleNotFoundError` is raised
 
 ---
 
-### BOARD-INFRA-001.3 — Event Handling / Integration Points
+### BOARD-INFRA-001.3 — Project Build Inside Container
 
 **AS A** developer
-**I WANT** board initialisation to be triggered as a discrete startup event driven by CLI arguments
-**SO THAT** the seed and grid parameters are applied before the first player action
+**I WANT** the project to be importable and executable inside the Docker container
+**SO THAT** the game can be launched and tested without host-machine Python
 
-**Architecture Reference:** Chapter 5 Building Block View — CLI, Game Controller; Chapter 9 Architecture Decisions — ADR-004; Chapter 6 Runtime View — 6.1 Scenario: Reveal a Cell
+**Architecture Reference:** Chapter 5 Building Block View — Board, MinePlacer; Chapter 7 Deployment View — 7.3 How to Run
 
-#### BOARD-INFRA-001.3-S1: Board is initialised once at startup using CLI arguments
+#### BOARD-INFRA-001.3-S1: Game launches inside the container without import errors
 
 **GIVEN**
 
-* the game is started with `python minesweeper/cli.py --seed 42`
+* the Docker image has been built successfully
 
 **WHEN**
 
-* the CLI entry point processes the `--seed` argument and constructs the `Board`
+* `docker run minesweeper python minesweeper/cli.py --help` (or equivalent smoke-run with piped EOF) is executed
 
 **THEN**
 
-* `Board` is created exactly once before the game loop begins
-* the seed is applied to `random` before `MinePlacer` runs
-* the game loop does not re-initialise the board between turns
+* the process exits with code 0
+* no `ImportError` or `ModuleNotFoundError` is printed to stdout or stderr
 
 ---
 
-### BOARD-INFRA-001.4 — Monitoring / Observability
+### BOARD-INFRA-001.4 — Test Suite Execution via pytest Inside Container
 
 **AS A** developer
-**I WANT** board initialisation failures and configuration errors to be reported clearly to stdout
-**SO THAT** misconfigured runs (e.g. more mines than cells) are diagnosable without a debugger
+**I WANT** the full test suite to run successfully inside the Docker container via pytest
+**SO THAT** board initialisation logic is verified in the containerised environment
 
-**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 10 Quality Requirements — QS-4
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run; Chapter 2 Architecture Constraints — OC-2; Chapter 5 Building Block View — Board, MinePlacer
 
-#### BOARD-INFRA-001.4-S1: Invalid board configuration prints a diagnostic and exits
-
-**GIVEN**
-
-* the game is started with a mine count greater than the number of cells (e.g. 30 mines on a 3 × 3 board)
-
-**WHEN**
-
-* `Board` or `MinePlacer` detects the invalid configuration
-
-**THEN**
-
-* a descriptive error message is printed to stdout (e.g. `"Error: mine count exceeds available cells"`)
-* the process exits with a non-zero exit code
-* no partial board state is left in memory
-
-#### BOARD-INFRA-001.4-S2: Successful board initialisation is confirmed on stdout
+#### BOARD-INFRA-001.4-S1: pytest discovers and runs board tests inside the container
 
 **GIVEN**
 
-* the game is started with a valid configuration
+* the Docker image has been built successfully
+* test files for board initialisation exist under a `tests/` directory at the project root
 
 **WHEN**
 
-* board initialisation completes
+* `docker run minesweeper pytest tests/` is executed
 
 **THEN**
 
-* the initial board is rendered to stdout
-* no error or warning message appears before the first input prompt
+* pytest discovers at least the board-related test files
+* all discovered tests pass
+* pytest exits with code 0
+
+#### BOARD-INFRA-001.4-S2: Repository structure supports pytest discovery inside Docker
+
+**GIVEN**
+
+* the Docker image has been built and the working directory is set to the project root inside the container
+
+**WHEN**
+
+* `docker run minesweeper pytest --collect-only` is executed
+
+**THEN**
+
+* pytest collects test items without "no tests ran" or collection errors
+* the collected items include board initialisation tests
 
 ---
 
@@ -342,12 +343,12 @@
 
 The story is implemented following the backend-first approach:
 
-1. **INFRA** — setup execution environment, verify state persistence constraint, wire startup event, and confirm observability
+1. **INFRA** — build container, verify dependencies, confirm project runs, and execute tests inside Docker
 
-   * BOARD-INFRA-001.1 (deployment)
-   * BOARD-INFRA-001.2 (data store)
-   * BOARD-INFRA-001.3 (event handling)
-   * BOARD-INFRA-001.4 (monitoring / observability)
+   * BOARD-INFRA-001.1 (Dockerfile build)
+   * BOARD-INFRA-001.2 (dependency installation)
+   * BOARD-INFRA-001.3 (project build / launch inside container)
+   * BOARD-INFRA-001.4 (test suite via pytest inside container)
 
 2. **BE** — implement core domain logic and services
 
@@ -379,8 +380,8 @@ The story is implemented following the backend-first approach:
 | BOARD-BE-001.2-S2    | Chapter 9 ADR-004                                             | BOARD-BE-001.2    | same seed produces identical mine positions                           |
 | BOARD-BE-001.3-S1    | Chapter 5 Building Block View — MinePlacer, Cell              | BOARD-BE-001.3    | interior safe cell adjacent_count equals expected value               |
 | BOARD-BE-001.3-S2    | Chapter 5 Building Block View — MinePlacer, Cell              | BOARD-BE-001.3    | corner cell uses only valid in-bounds neighbours                      |
-| BOARD-INFRA-001.1-S1 | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003       | BOARD-INFRA-001.1 | game starts with `python minesweeper/cli.py`; no import errors        |
-| BOARD-INFRA-001.2-S1 | Chapter 7 Deployment View — 7.4 (Persistent storage: None)    | BOARD-INFRA-001.2 | no files created or modified during a game session                    |
-| BOARD-INFRA-001.3-S1 | Chapter 9 ADR-004; Chapter 6 Runtime View 6.1                 | BOARD-INFRA-001.3 | Board created once at startup; seed applied before MinePlacer runs    |
-| BOARD-INFRA-001.4-S1 | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-4 | BOARD-INFRA-001.4 | invalid config prints diagnostic and exits with non-zero code         |
-| BOARD-INFRA-001.4-S2 | Chapter 8 — 8.3 Logging; Chapter 10 QS-4                     | BOARD-INFRA-001.4 | valid init renders board; no error message before first prompt        |
+| BOARD-INFRA-001.1-S1 | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003        | BOARD-INFRA-001.1 | `docker build` completes with exit code 0; no build errors            |
+| BOARD-INFRA-001.2-S1 | Chapter 7 Deployment View — 7.4; Chapter 2 TC-4                | BOARD-INFRA-001.2 | `pytest --version` succeeds inside container; no ModuleNotFoundError  |
+| BOARD-INFRA-001.3-S1 | Chapter 5 Building Block View — Board; Chapter 7 — 7.3         | BOARD-INFRA-001.3 | game launches inside container; no ImportError                        |
+| BOARD-INFRA-001.4-S1 | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — Board, MinePlacer | BOARD-INFRA-001.4 | pytest discovers and passes board tests inside container              |
+| BOARD-INFRA-001.4-S2 | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — Board, MinePlacer | BOARD-INFRA-001.4 | `pytest --collect-only` collects board tests without errors           |
