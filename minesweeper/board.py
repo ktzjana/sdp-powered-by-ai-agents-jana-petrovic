@@ -1,5 +1,11 @@
 import random
 from dataclasses import dataclass
+from enum import Enum, auto
+
+
+class RevealResult(Enum):
+    OK = auto()
+    MINE_HIT = auto()
 
 
 @dataclass
@@ -43,3 +49,10 @@ class Board:
                         ):
                             count += 1
                 self.cell(row, col).adjacent_count = count
+
+    def reveal(self, row: int, col: int) -> RevealResult:
+        cell = self.cell(row, col)
+        cell.revealed = True
+        if cell.is_mine:
+            return RevealResult.MINE_HIT
+        return RevealResult.OK
