@@ -48,3 +48,18 @@ def test_board_be_001_2_s2_mine_placement_reproducible_with_fixed_seed():
     mines_a = [i for i, cell in enumerate(board_a.grid) if cell.is_mine]
     mines_b = [i for i, cell in enumerate(board_b.grid) if cell.is_mine]
     assert mines_a == mines_b
+
+
+def test_board_be_001_3_s1_interior_safe_cell_has_correct_adjacent_count():
+    # GIVEN - a 3x3 board where mines are at (0,0) and (0,1),
+    # so safe cell (1,1) has exactly 2 neighbouring mines
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(0, 0).is_mine = True
+    board.cell(0, 1).is_mine = True
+    board.compute_adjacent_counts()
+
+    # WHEN
+    result = board.cell(1, 1).adjacent_count
+
+    # THEN
+    assert result == 2
