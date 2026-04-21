@@ -24,3 +24,31 @@ def test_game_be_001_1_s2_reveal_safe_cell_returns_ok():
     # THEN
     assert result == RevealResult.OK
     assert board.cell(2, 2).revealed is True
+
+
+def test_game_be_001_2_s1_flood_fill_reveals_connected_empty_cells():
+    # GIVEN - a 3x3 board: (0,0),(0,1),(1,0),(1,1) are empty;
+    # mines at (2,2) only; border cells (0,2),(1,2),(2,0),(2,1) are numbered
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(2, 2).is_mine = True
+    board.compute_adjacent_counts()
+    # (0,0),(0,1),(1,0),(1,1) should have adjacent_count==0 (no adjacent mine)
+    # (0,2),(1,2),(2,0),(2,1) should have adjacent_count>0
+
+    # WHEN
+    result = board.reveal(0, 0)
+
+    # THEN
+    assert result == RevealResult.OK
+    # all connected empty cells are revealed
+    assert board.cell(0, 0).revealed is True
+    assert board.cell(0, 1).revealed is True
+    assert board.cell(1, 0).revealed is True
+    assert board.cell(1, 1).revealed is True
+    # numbered border cells adjacent to the empty region are also revealed
+    assert board.cell(0, 2).revealed is True
+    assert board.cell(1, 2).revealed is True
+    assert board.cell(2, 0).revealed is True
+    assert board.cell(2, 1).revealed is True
+    # mine cell is NOT revealed
+    assert board.cell(2, 2).revealed is False

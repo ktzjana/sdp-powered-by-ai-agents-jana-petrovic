@@ -52,7 +52,17 @@ class Board:
 
     def reveal(self, row: int, col: int) -> RevealResult:
         cell = self.cell(row, col)
+        if cell.revealed:
+            return RevealResult.OK
         cell.revealed = True
         if cell.is_mine:
             return RevealResult.MINE_HIT
+        if cell.adjacent_count == 0:
+            for dr in (-1, 0, 1):
+                for dc in (-1, 0, 1):
+                    if dr == 0 and dc == 0:
+                        continue
+                    r, c = row + dr, col + dc
+                    if 0 <= r < self.rows and 0 <= c < self.cols:
+                        self.reveal(r, c)
         return RevealResult.OK
