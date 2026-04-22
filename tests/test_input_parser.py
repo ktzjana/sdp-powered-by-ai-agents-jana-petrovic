@@ -73,3 +73,28 @@ def test_cli_fe_001_1_s1_usage_hint_printed_for_unrecognised_input():
     assert result.returncode == 0, result.stderr
     usage = "Usage: r <row> <col> | f <row> <col> | q"
     assert result.stdout.count(usage) == 1
+
+
+def test_cli_fe_001_1_s2_no_usage_hint_for_valid_command():
+    # GIVEN - the CLI is running
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player enters a valid flag command then q
+    result = subprocess.run(
+        [sys.executable, "minesweeper/cli.py", "--seed", "42"],
+        input="f 0 0\nq\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - no usage hint is printed; board renders with F visible
+    assert result.returncode == 0, result.stderr
+    usage = "Usage: r <row> <col> | f <row> <col> | q"
+    assert usage not in result.stdout
+    assert "F" in result.stdout
