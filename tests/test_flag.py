@@ -38,3 +38,22 @@ def test_game_be_003_2_s1_toggle_flag_on_revealed_cell_is_noop():
 
     # THEN - flagged state is unchanged and no exception raised
     assert board.cell(2, 2).flagged is False
+
+
+def test_game_story_003_s1_flag_unrevealed_cell():
+    # GIVEN - cell (1, 4) is unrevealed and not flagged
+    from minesweeper.game import Game
+    from minesweeper.renderer import BoardRenderer
+
+    board = Board(rows=3, cols=5, mines=0)
+    game = Game(board)
+    assert board.cell(1, 4).flagged is False
+    assert board.cell(1, 4).revealed is False
+
+    # WHEN - the player dispatches flag command f 1 4
+    game.flag(1, 4)
+
+    # THEN - cell is flagged and board renders flag marker at (1, 4)
+    assert board.cell(1, 4).flagged is True
+    output = BoardRenderer.render(board)
+    assert output.strip().splitlines()[1].split()[4] == "F"
