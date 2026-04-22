@@ -165,3 +165,28 @@ def test_cli_story_001_s2_valid_flag_command_parsed_and_dispatched():
     lines = result.stdout.splitlines()
     # Second board starts at line 5 (0-indexed); row 1 of second board is line 6
     assert any(ln.split() and ln.split()[4] == "F" for ln in lines)
+
+
+def test_cli_story_001_s3_invalid_input_prints_usage_hint_and_continues():
+    # GIVEN - the CLI is running
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player enters "xyz" (invalid) then "q"
+    result = subprocess.run(
+        [sys.executable, "minesweeper/cli.py", "--seed", "42"],
+        input="xyz\nq\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - usage hint printed, no traceback, process exits 0
+    assert result.returncode == 0, result.stderr
+    assert "Usage: r <row> <col> | f <row> <col> | q" in result.stdout
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
