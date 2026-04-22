@@ -1,4 +1,6 @@
 # Flag / unflag tests — GAME-BE-003.x scenarios
+from pathlib import Path
+
 from minesweeper.board import Board
 
 
@@ -92,3 +94,30 @@ def test_game_story_003_s3_flag_on_revealed_cell_is_ignored():
     # THEN - board state is unchanged, no error, game continues
     assert board.cell(2, 2).flagged is False
     assert game.state == GameState.PLAYING
+
+
+def test_game_story_003_s4_e2e_flag_cell_and_verify_board_display():
+    # GIVEN - the game is started with --seed 42
+    import os
+    import subprocess
+    import sys
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player enters f 0 0 then q
+    result = subprocess.run(
+        [sys.executable, "minesweeper/cli.py", "--seed", "42"],
+        input="f 0 0\nq\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - stdout contains F at (0,0), process exits with code 0
+    assert result.returncode == 0, f"non-zero exit: {result.stderr}"
+    assert "F" in result.stdout
+    # The second board render (after f 0 0) should show F at position (0, 0)
+    lines = result.stdout.strip().splitlines()
+    # Find the first line that starts with F
+    flag_lines = [ln for ln in lines if ln.split() and ln.split()[0] == "F"]
+    assert flag_lines, "No board line found with F at column 0"
