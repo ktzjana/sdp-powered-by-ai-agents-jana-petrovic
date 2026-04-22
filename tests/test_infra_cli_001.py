@@ -40,3 +40,12 @@ def test_cli_infra_001_3_s1_cli_module_is_importable():
     spec = importlib.util.spec_from_file_location("minesweeper.cli", cli_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+
+
+def test_cli_infra_001_4_s1_input_parser_test_module_is_discoverable():
+    # GIVEN - the tests/ directory exists in the project
+
+    # WHEN / THEN - an input parsing test file exists for pytest to discover
+    assert (
+        Path(__file__).parent / "test_input_parser.py"
+    ).exists(), "tests/test_input_parser.py not found"
