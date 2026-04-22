@@ -6,6 +6,7 @@ ENV PYTHONPATH=/app
 COPY pyproject.toml .
 RUN pip install --no-cache-dir pytest
 
+COPY Dockerfile .
 COPY minesweeper/ minesweeper/
 COPY tests/ tests/
 
