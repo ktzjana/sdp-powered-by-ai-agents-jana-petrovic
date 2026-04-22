@@ -219,124 +219,124 @@
 
 ## INFRA Sub-Stories
 
-### GAME-INFRA-001.1 — Deployment / Execution Environment
+### GAME-INFRA-001.1 — Dockerfile Build
 
 **AS A** developer
-**I WANT** the game to accept a `--seed` argument at the CLI entry point and run with a single command
-**SO THAT** reveal scenarios are reproducible in automated tests without any installation steps
+**I WANT** the project to build successfully inside a Docker container
+**SO THAT** the reveal flow can be tested in a reproducible containerised environment
 
-**Architecture Reference:** Chapter 9 Architecture Decisions — ADR-004; Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003
 
-#### GAME-INFRA-001.1-S1: Game runs with a fixed seed from the CLI
+#### GAME-INFRA-001.1-S1: Dockerfile builds without errors
 
 **GIVEN**
 
-* Python 3.10+ is installed on the host machine
+* a `Dockerfile` exists at the project root
+* the `Dockerfile` uses a `python:3.10` (or later) base image
+* the project source is copied into the image
 
 **WHEN**
 
-* `python minesweeper/cli.py --seed 42` is executed
+* `docker build -t minesweeper .` is executed from the project root
 
 **THEN**
 
-* the game starts with a deterministic board
-* the same mine positions appear on every run with `--seed 42`
-* no third-party packages are required
+* the build completes with exit code 0
+* no build errors or missing-file errors are reported
 
 ---
 
-### GAME-INFRA-001.2 — Data Store / State Persistence
+### GAME-INFRA-001.2 — Dependency Installation Inside Container
 
 **AS A** developer
-**I WANT** the reveal state to be maintained entirely in-memory within the `Board` aggregate
-**SO THAT** no file I/O is needed between turns, consistent with the architecture
+**I WANT** all required dependencies to be installed correctly inside the Docker container
+**SO THAT** the reveal test suite can run without missing-module errors
 
-**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — Board, Cell
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements; Chapter 2 Architecture Constraints — TC-4
 
-> **Applicability note:** The architecture specifies no persistent storage. Revealed cell state (`Cell.revealed`) lives in the in-memory `Board` aggregate and is not written to disk. This story verifies that constraint holds during the reveal flow.
+> **Applicability note:** The architecture specifies stdlib-only runtime dependencies (TC-4). The container must still install `pytest` for test execution. No other third-party packages are required.
 
-#### GAME-INFRA-001.2-S1: Reveal state is held in-memory and not persisted to disk
+#### GAME-INFRA-001.2-S1: pytest is available inside the container after build
 
 **GIVEN**
 
-* the game is running and the player reveals several cells
+* the Docker image has been built successfully
 
 **WHEN**
 
-* each `board.reveal()` call completes
+* `docker run minesweeper pytest --version` is executed
 
 **THEN**
 
-* `Cell.revealed` is updated in the in-memory `Board` object
-* no files are created or modified in the working directory
+* pytest reports its version and exits with code 0
+* no `ModuleNotFoundError` is raised
 
 ---
 
-### GAME-INFRA-001.3 — Event Handling / Integration Points
+### GAME-INFRA-001.3 — Project Build Inside Container
 
 **AS A** developer
-**I WANT** each player reveal command to be processed as a discrete event dispatched through `InputParser` → `Game` → `Board`
-**SO THAT** the reveal flow is traceable and each layer handles only its own responsibility
+**I WANT** the project to be importable and executable inside the Docker container
+**SO THAT** the reveal flow can be exercised without host-machine Python
 
-**Architecture Reference:** Chapter 5 Building Block View — InputParser, Game, RevealService; Chapter 6 Runtime View — 6.1 Scenario: Reveal a Cell; Chapter 8 Cross-cutting Concepts — 8.2 Error Handling
+**Architecture Reference:** Chapter 5 Building Block View — Game, RevealService; Chapter 7 Deployment View — 7.3 How to Run
 
-#### GAME-INFRA-001.3-S1: Invalid reveal coordinates are caught and re-prompted without crashing
+#### GAME-INFRA-001.3-S1: Game launches inside the container without import errors
 
 **GIVEN**
 
-* the game is running with a 5 × 5 board
+* the Docker image has been built successfully
 
 **WHEN**
 
-* the player enters `r 99 99`
+* `docker run minesweeper python minesweeper/cli.py --help` (or equivalent smoke-run with piped EOF) is executed
 
 **THEN**
 
-* `InputParser` or `Game` catches the out-of-bounds condition
-* the CLI prints a usage hint
-* the game re-prompts for input
-* the process does not exit or raise an unhandled exception
+* the process exits with code 0
+* no `ImportError` or `ModuleNotFoundError` is printed to stdout or stderr
 
 ---
 
-### GAME-INFRA-001.4 — Monitoring / Observability
+### GAME-INFRA-001.4 — Test Suite Execution via pytest Inside Container
 
 **AS A** developer
-**I WANT** the outcome of every reveal action (safe reveal, flood-fill, mine hit) to be visible on stdout
-**SO THAT** the game state is diagnosable at every step without a debugger
+**I WANT** the full test suite to run successfully inside the Docker container via pytest
+**SO THAT** reveal and flood-fill logic is verified in the containerised environment
 
-**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 10 Quality Requirements — QS-1, QS-4
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run; Chapter 2 Architecture Constraints — OC-2; Chapter 5 Building Block View — Game, RevealService
 
-#### GAME-INFRA-001.4-S1: Mine hit produces a visible diagnostic message before exit
-
-**GIVEN**
-
-* the game is running
-
-**WHEN**
-
-* the player reveals a mine cell
-
-**THEN**
-
-* `"BOOM! You hit a mine."` is printed to stdout
-* the board is rendered showing the mine position
-* the process exits cleanly with code 0
-
-#### GAME-INFRA-001.4-S2: Flood-fill result is visible in the re-rendered board
+#### GAME-INFRA-001.4-S1: pytest discovers and runs reveal tests inside the container
 
 **GIVEN**
 
-* the player reveals an empty cell that triggers flood-fill
+* the Docker image has been built successfully
+* test files for reveal logic exist under a `tests/` directory at the project root
 
 **WHEN**
 
-* `RevealService` completes the flood-fill
+* `docker run minesweeper pytest tests/` is executed
 
 **THEN**
 
-* the updated board is printed to stdout showing all newly revealed cells
-* no silent state change occurs without a corresponding board render
+* pytest discovers at least the reveal-related test files
+* all discovered tests pass
+* pytest exits with code 0
+
+#### GAME-INFRA-001.4-S2: Repository structure supports pytest discovery inside Docker
+
+**GIVEN**
+
+* the Docker image has been built and the working directory is set to the project root inside the container
+
+**WHEN**
+
+* `docker run minesweeper pytest --collect-only` is executed
+
+**THEN**
+
+* pytest collects test items without "no tests ran" or collection errors
+* the collected items include reveal and flood-fill tests
 
 ---
 
@@ -356,8 +356,8 @@
 | GAME-BE-001.2-S2      | Chapter 9 ADR-002                                                   | GAME-BE-001.2    | re-revealing an already-revealed cell is a no-op; no recursion error        |
 | GAME-BE-001.3-S1      | Chapter 5 Building Block View — Game, Chapter 6 Runtime View 6.3   | GAME-BE-001.3    | check_win() returns True when last safe cell is revealed                    |
 | GAME-BE-001.3-S2      | Chapter 5 Building Block View — Game                                | GAME-BE-001.3    | check_win() returns False when safe cells remain; loop continues            |
-| GAME-INFRA-001.1-S1   | Chapter 9 ADR-004, Chapter 7 Deployment View — 7.3, 7.4        | GAME-INFRA-001.1 | --seed 42 produces identical board on every run; no packages required   |
-| GAME-INFRA-001.2-S1   | Chapter 7 Deployment View — 7.4 (Persistent storage: None)     | GAME-INFRA-001.2 | Cell.revealed updated in-memory; no files created during reveal         |
-| GAME-INFRA-001.3-S1   | Chapter 8 — 8.2 Error Handling, Chapter 10 QS-4                | GAME-INFRA-001.3 | out-of-bounds input re-prompts; process stays alive                     |
-| GAME-INFRA-001.4-S1   | Chapter 8 — 8.2 Error Handling, 8.3 Logging; Chapter 10 QS-1  | GAME-INFRA-001.4 | mine hit prints diagnostic and board; exits cleanly with code 0         |
-| GAME-INFRA-001.4-S2   | Chapter 8 — 8.3 Logging; Chapter 5 — BoardRenderer             | GAME-INFRA-001.4 | flood-fill result visible in re-rendered board; no silent state change  |
+| GAME-INFRA-001.1-S1   | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003         | GAME-INFRA-001.1 | `docker build` completes with exit code 0; no build errors              |
+| GAME-INFRA-001.2-S1   | Chapter 7 Deployment View — 7.4; Chapter 2 TC-4                 | GAME-INFRA-001.2 | `pytest --version` succeeds inside container; no ModuleNotFoundError    |
+| GAME-INFRA-001.3-S1   | Chapter 5 Building Block View — Game, RevealService; Chapter 7 — 7.3 | GAME-INFRA-001.3 | game launches inside container; no ImportError                     |
+| GAME-INFRA-001.4-S1   | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — Game, RevealService | GAME-INFRA-001.4 | pytest discovers and passes reveal tests inside container              |
+| GAME-INFRA-001.4-S2   | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — Game, RevealService | GAME-INFRA-001.4 | `pytest --collect-only` collects reveal tests without errors           |

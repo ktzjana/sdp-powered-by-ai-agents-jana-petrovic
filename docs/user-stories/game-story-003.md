@@ -161,122 +161,124 @@
 
 ## INFRA Sub-Stories
 
-### GAME-INFRA-003.1 — Deployment / Execution Environment
+### GAME-INFRA-003.1 — Dockerfile Build
 
 **AS A** developer
-**I WANT** the flag command to work in the same single-command execution environment as all other commands
-**SO THAT** no additional setup is needed to exercise flag/unflag behaviour
+**I WANT** the project to build successfully inside a Docker container
+**SO THAT** flag/unflag behaviour can be tested in a reproducible containerised environment
 
-**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003, ADR-004
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run, 7.4 Runtime Requirements; Chapter 9 Architecture Decisions — ADR-003
 
-#### GAME-INFRA-003.1-S1: Flag command works in a reproducible seeded run
+#### GAME-INFRA-003.1-S1: Dockerfile builds without errors
 
 **GIVEN**
 
-* Python 3.10+ is installed on the host machine
+* a `Dockerfile` exists at the project root
+* the `Dockerfile` uses a `python:3.10` (or later) base image
+* the project source is copied into the image
 
 **WHEN**
 
-* `python minesweeper/cli.py --seed 42` is executed and the player enters `f 0 0`
+* `docker build -t minesweeper .` is executed from the project root
 
 **THEN**
 
-* the flag is applied and the board re-renders with the flag marker at (0, 0)
-* no third-party packages are required
+* the build completes with exit code 0
+* no build errors or missing-file errors are reported
 
 ---
 
-### GAME-INFRA-003.2 — Data Store / State Persistence
+### GAME-INFRA-003.2 — Dependency Installation Inside Container
 
 **AS A** developer
-**I WANT** the flagged state of cells to be maintained entirely in-memory within the `Board` aggregate
-**SO THAT** no file I/O is needed to track flags between turns
+**I WANT** all required dependencies to be installed correctly inside the Docker container
+**SO THAT** the flag/unflag test suite can run without missing-module errors
 
-**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements (Persistent storage: None); Chapter 5 Building Block View — Board, Cell
+**Architecture Reference:** Chapter 7 Deployment View — 7.4 Runtime Requirements; Chapter 2 Architecture Constraints — TC-4
 
-> **Applicability note:** The architecture specifies no persistent storage. `Cell.flagged` lives in the in-memory `Board` aggregate and is not written to disk. This story verifies that constraint holds during the flag flow.
+> **Applicability note:** The architecture specifies stdlib-only runtime dependencies (TC-4). The container must still install `pytest` for test execution. No other third-party packages are required.
 
-#### GAME-INFRA-003.2-S1: Flag state is held in-memory and not persisted to disk
+#### GAME-INFRA-003.2-S1: pytest is available inside the container after build
 
 **GIVEN**
 
-* the game is running and the player flags and unflags several cells
+* the Docker image has been built successfully
 
 **WHEN**
 
-* each `board.toggle_flag()` call completes
+* `docker run minesweeper pytest --version` is executed
 
 **THEN**
 
-* `Cell.flagged` is updated in the in-memory `Board` object
-* no files are created or modified in the working directory
+* pytest reports its version and exits with code 0
+* no `ModuleNotFoundError` is raised
 
 ---
 
-### GAME-INFRA-003.3 — Event Handling / Integration Points
+### GAME-INFRA-003.3 — Project Build Inside Container
 
 **AS A** developer
-**I WANT** each flag command to be processed as a discrete event dispatched through `InputParser` → `Game` → `Board.toggle_flag()`
-**SO THAT** the flag flow is traceable and invalid flag actions are handled at the correct layer
+**I WANT** the project to be importable and executable inside the Docker container
+**SO THAT** flag/unflag flows can be exercised without host-machine Python
 
-**Architecture Reference:** Chapter 5 Building Block View — InputParser, Game, Board; Chapter 6 Runtime View — 6.2 Scenario: Flag a Cell; Chapter 8 Cross-cutting Concepts — 8.2 Error Handling
+**Architecture Reference:** Chapter 5 Building Block View — Board, Game; Chapter 7 Deployment View — 7.3 How to Run
 
-#### GAME-INFRA-003.3-S1: Flag on an out-of-bounds cell is caught and re-prompted without crashing
+#### GAME-INFRA-003.3-S1: Game launches inside the container without import errors
 
 **GIVEN**
 
-* the game is running with a 5 × 5 board
+* the Docker image has been built successfully
 
 **WHEN**
 
-* the player enters `f 99 99`
+* `docker run minesweeper python minesweeper/cli.py --help` (or equivalent smoke-run with piped EOF) is executed
 
 **THEN**
 
-* `InputParser` or `Game` catches the out-of-bounds condition
-* the CLI prints a usage hint
-* the game re-prompts for input
-* the process does not exit or raise an unhandled exception
+* the process exits with code 0
+* no `ImportError` or `ModuleNotFoundError` is printed to stdout or stderr
 
 ---
 
-### GAME-INFRA-003.4 — Monitoring / Observability
+### GAME-INFRA-003.4 — Test Suite Execution via pytest Inside Container
 
 **AS A** developer
-**I WANT** every flag and unflag action to produce a visible board re-render on stdout
-**SO THAT** the current flag state is always diagnosable without a debugger
+**I WANT** the full test suite to run successfully inside the Docker container via pytest
+**SO THAT** flag/unflag logic is verified in the containerised environment
 
-**Architecture Reference:** Chapter 8 Cross-cutting Concepts — 8.2 Error Handling, 8.3 Logging; Chapter 5 Building Block View — BoardRenderer
+**Architecture Reference:** Chapter 7 Deployment View — 7.3 How to Run; Chapter 2 Architecture Constraints — OC-2; Chapter 5 Building Block View — Board, Game
 
-#### GAME-INFRA-003.4-S1: Flag action produces a visible board update on stdout
-
-**GIVEN**
-
-* the game is running
-
-**WHEN**
-
-* the player enters a valid flag command (e.g. `f 1 4`)
-
-**THEN**
-
-* the updated board is printed to stdout showing the flag marker at (1, 4)
-* no silent state change occurs without a corresponding board render
-
-#### GAME-INFRA-003.4-S2: Flag on a revealed cell produces a visible no-op message
+#### GAME-INFRA-003.4-S1: pytest discovers and runs flag tests inside the container
 
 **GIVEN**
 
-* cell (2, 2) has already been revealed
+* the Docker image has been built successfully
+* test files for flag/unflag logic exist under a `tests/` directory at the project root
 
 **WHEN**
 
-* the player enters `f 2 2`
+* `docker run minesweeper pytest tests/` is executed
 
 **THEN**
 
-* the CLI prints a message indicating the action was ignored (e.g. `"Cannot flag a revealed cell"`) or re-renders the unchanged board
-* the game re-prompts without crashing
+* pytest discovers at least the flag-related test files
+* all discovered tests pass
+* pytest exits with code 0
+
+#### GAME-INFRA-003.4-S2: Repository structure supports pytest discovery inside Docker
+
+**GIVEN**
+
+* the Docker image has been built and the working directory is set to the project root inside the container
+
+**WHEN**
+
+* `docker run minesweeper pytest --collect-only` is executed
+
+**THEN**
+
+* pytest collects test items without "no tests ran" or collection errors
+* the collected items include flag/unflag tests
 
 ---
 
@@ -293,8 +295,8 @@
 | GAME-BE-003.1-S1      | Chapter 5 Building Block View — Board, Chapter 6 6.2           | GAME-BE-003.1    | toggle_flag sets flagged=True on unflagged cell                       |
 | GAME-BE-003.1-S2      | Chapter 5 Building Block View — Board                           | GAME-BE-003.1    | toggle_flag sets flagged=False on flagged cell                        |
 | GAME-BE-003.2-S1      | Chapter 8 Cross-cutting Concepts — Error Handling               | GAME-BE-003.2    | toggle_flag on revealed cell is no-op; no exception                   |
-| GAME-INFRA-003.1-S1   | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003, ADR-004   | GAME-INFRA-003.1 | flag works in seeded run; no packages required                        |
-| GAME-INFRA-003.2-S1   | Chapter 7 Deployment View — 7.4 (Persistent storage: None)          | GAME-INFRA-003.2 | Cell.flagged updated in-memory; no files created during flag actions  |
-| GAME-INFRA-003.3-S1   | Chapter 8 — 8.2 Error Handling; Chapter 6 Runtime View 6.2          | GAME-INFRA-003.3 | out-of-bounds flag re-prompts; process stays alive                    |
-| GAME-INFRA-003.4-S1   | Chapter 8 — 8.3 Logging; Chapter 5 — BoardRenderer                  | GAME-INFRA-003.4 | flag action renders updated board; no silent state change             |
-| GAME-INFRA-003.4-S2   | Chapter 8 — 8.2 Error Handling, 8.3 Logging                         | GAME-INFRA-003.4 | flag on revealed cell shows message or re-renders; no crash           |
+| GAME-INFRA-003.1-S1   | Chapter 7 Deployment View — 7.3, 7.4; Chapter 9 ADR-003         | GAME-INFRA-003.1 | `docker build` completes with exit code 0; no build errors              |
+| GAME-INFRA-003.2-S1   | Chapter 7 Deployment View — 7.4; Chapter 2 TC-4                 | GAME-INFRA-003.2 | `pytest --version` succeeds inside container; no ModuleNotFoundError    |
+| GAME-INFRA-003.3-S1   | Chapter 5 Building Block View — Board, Game; Chapter 7 — 7.3   | GAME-INFRA-003.3 | game launches inside container; no ImportError                          |
+| GAME-INFRA-003.4-S1   | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — Board, Game       | GAME-INFRA-003.4 | pytest discovers and passes flag tests inside container                 |
+| GAME-INFRA-003.4-S2   | Chapter 7 — 7.3; Chapter 2 OC-2; Chapter 5 — Board, Game       | GAME-INFRA-003.4 | `pytest --collect-only` collects flag tests without errors              |
