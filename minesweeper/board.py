@@ -66,3 +66,8 @@ class Board:
                     if 0 <= r < self.rows and 0 <= c < self.cols:
                         self.reveal(r, c)
         return RevealResult.OK
+
+    def toggle_flag(self, row: int, col: int) -> None:
+        cell = self.cell(row, col)
+        if not cell.revealed:
+            cell.flagged = not cell.flagged
