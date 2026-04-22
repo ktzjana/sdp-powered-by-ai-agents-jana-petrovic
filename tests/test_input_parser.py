@@ -131,3 +131,37 @@ def test_cli_story_001_s1_valid_reveal_command_parsed_and_dispatched():
     assert result.returncode == 0, result.stderr
     # Two board renders: initial (5 rows) + after reveal (5 rows) = 10 lines
     assert len(result.stdout.splitlines()) >= 10
+
+
+def test_cli_story_001_s2_valid_flag_command_parsed_and_dispatched():
+    # GIVEN - the CLI is running
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player enters "f 1 4" then "q"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--rows",
+            "5",
+            "--cols",
+            "5",
+            "--mines",
+            "0",
+        ],
+        input="f 1 4\nq\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - board re-renders with F at row 1 col 4, process exits 0
+    assert result.returncode == 0, result.stderr
+    lines = result.stdout.splitlines()
+    # Second board starts at line 5 (0-indexed); row 1 of second board is line 6
+    assert any(ln.split() and ln.split()[4] == "F" for ln in lines)
