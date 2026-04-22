@@ -24,3 +24,15 @@ def test_cli_be_001_1_s2_parse_returns_flag_command():
     assert cmd.action == "flag"
     assert cmd.row == 1
     assert cmd.col == 4
+
+
+def test_cli_be_001_1_s3_parse_returns_quit_command():
+    # GIVEN - the raw input string is "q"
+
+    # WHEN
+    cmd = InputParser.parse("q")
+
+    # THEN
+    assert cmd.action == "quit"
+    assert cmd.row is None
+    assert cmd.col is None
