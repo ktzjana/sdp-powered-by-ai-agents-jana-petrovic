@@ -190,3 +190,27 @@ def test_cli_story_001_s3_invalid_input_prints_usage_hint_and_continues():
     assert "Usage: r <row> <col> | f <row> <col> | q" in result.stdout
     assert "Traceback" not in result.stdout
     assert "Traceback" not in result.stderr
+
+
+def test_cli_story_001_s4_quit_command_exits_cleanly():
+    # GIVEN - the CLI is running
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player enters "q"
+    result = subprocess.run(
+        [sys.executable, "minesweeper/cli.py", "--seed", "42"],
+        input="q\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - process exits with code 0, no traceback
+    assert result.returncode == 0, result.stderr
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
