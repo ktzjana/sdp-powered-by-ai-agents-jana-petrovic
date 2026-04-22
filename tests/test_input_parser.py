@@ -36,3 +36,16 @@ def test_cli_be_001_1_s3_parse_returns_quit_command():
     assert cmd.action == "quit"
     assert cmd.row is None
     assert cmd.col is None
+
+
+def test_cli_be_001_1_s4_parse_raises_for_invalid_input():
+    # GIVEN - invalid input strings
+
+    import pytest
+
+    # WHEN / THEN - ValueError is raised for unrecognised input
+    with pytest.raises(ValueError):
+        InputParser.parse("xyz")
+
+    with pytest.raises(ValueError):
+        InputParser.parse("r abc")
