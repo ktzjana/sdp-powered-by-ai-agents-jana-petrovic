@@ -76,3 +76,19 @@ def test_game_story_003_s2_unflag_flagged_cell_toggle():
     assert board.cell(1, 4).flagged is False
     output = BoardRenderer.render(board)
     assert output.strip().splitlines()[1].split()[4] == "."
+
+
+def test_game_story_003_s3_flag_on_revealed_cell_is_ignored():
+    # GIVEN - cell (2, 2) has already been revealed
+    from minesweeper.game import Game, GameState
+
+    board = Board(rows=3, cols=5, mines=0)
+    game = Game(board)
+    board.cell(2, 2).revealed = True
+
+    # WHEN - the player dispatches flag command f 2 2
+    game.flag(2, 2)
+
+    # THEN - board state is unchanged, no error, game continues
+    assert board.cell(2, 2).flagged is False
+    assert game.state == GameState.PLAYING
