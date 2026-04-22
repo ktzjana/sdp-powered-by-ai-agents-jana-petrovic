@@ -98,3 +98,36 @@ def test_cli_fe_001_1_s2_no_usage_hint_for_valid_command():
     usage = "Usage: r <row> <col> | f <row> <col> | q"
     assert usage not in result.stdout
     assert "F" in result.stdout
+
+
+def test_cli_story_001_s1_valid_reveal_command_parsed_and_dispatched():
+    # GIVEN - the CLI is running with no mines so (2, 3) is always safe
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player enters "r 2 3" then "q"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--rows",
+            "5",
+            "--cols",
+            "5",
+            "--mines",
+            "0",
+        ],
+        input="r 2 3\nq\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - board re-renders after reveal, process exits 0
+    assert result.returncode == 0, result.stderr
+    # Two board renders: initial (5 rows) + after reveal (5 rows) = 10 lines
+    assert len(result.stdout.splitlines()) >= 10
