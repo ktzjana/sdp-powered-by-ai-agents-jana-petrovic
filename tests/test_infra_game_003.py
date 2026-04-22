@@ -18,6 +18,20 @@ def test_game_infra_003_1_s1_dockerfile_declares_buildable_image():
     assert "pytest" in content
 
 
+def test_game_infra_003_3_s1_cli_module_is_importable():
+    # GIVEN - the project is installed inside the container
+
+    # WHEN / THEN - cli.py exists and imports without errors
+    cli_path = Path(__file__).parent.parent / "minesweeper" / "cli.py"
+    assert cli_path.exists(), "minesweeper/cli.py not found"
+
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("minesweeper.cli", cli_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)  # raises on ImportError
+
+
 def test_game_infra_003_2_s1_dockerfile_installs_pytest():
     # GIVEN - the Docker image has been built successfully
 
