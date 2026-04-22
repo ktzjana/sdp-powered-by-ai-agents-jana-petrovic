@@ -36,16 +36,20 @@ def main():
             try:
                 row, col = int(parts[1]), int(parts[2])
             except ValueError:
+                print("Usage: r <row> <col> | f <row> <col> | q")
                 continue
             game.flag(row, col)
             print(BoardRenderer.render(board), end="")
-        if parts[0] == "r" and len(parts) == 3:
+        elif parts[0] == "r" and len(parts) == 3:
             try:
                 row, col = int(parts[1]), int(parts[2])
             except ValueError:
+                print("Usage: r <row> <col> | f <row> <col> | q")
                 continue
             game.reveal(row, col)
             print(BoardRenderer.render(board), end="")
+        else:
+            print("Usage: r <row> <col> | f <row> <col> | q")
 
 
 if __name__ == "__main__":

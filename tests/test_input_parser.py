@@ -49,3 +49,27 @@ def test_cli_be_001_1_s4_parse_raises_for_invalid_input():
 
     with pytest.raises(ValueError):
         InputParser.parse("r abc")
+
+
+def test_cli_fe_001_1_s1_usage_hint_printed_for_unrecognised_input():
+    # GIVEN - the CLI is running
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player enters "xyz" (invalid) then "q"
+    result = subprocess.run(
+        [sys.executable, "minesweeper/cli.py", "--seed", "42"],
+        input="xyz\nq\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - usage hint is printed once and q exits cleanly
+    assert result.returncode == 0, result.stderr
+    usage = "Usage: r <row> <col> | f <row> <col> | q"
+    assert result.stdout.count(usage) == 1
