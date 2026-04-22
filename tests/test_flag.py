@@ -57,3 +57,22 @@ def test_game_story_003_s1_flag_unrevealed_cell():
     assert board.cell(1, 4).flagged is True
     output = BoardRenderer.render(board)
     assert output.strip().splitlines()[1].split()[4] == "F"
+
+
+def test_game_story_003_s2_unflag_flagged_cell_toggle():
+    # GIVEN - cell (1, 4) is already flagged
+    from minesweeper.game import Game
+    from minesweeper.renderer import BoardRenderer
+
+    board = Board(rows=3, cols=5, mines=0)
+    game = Game(board)
+    game.flag(1, 4)
+    assert board.cell(1, 4).flagged is True
+
+    # WHEN - the player dispatches flag command f 1 4 again
+    game.flag(1, 4)
+
+    # THEN - cell is unflagged and board renders hidden marker at (1, 4)
+    assert board.cell(1, 4).flagged is False
+    output = BoardRenderer.render(board)
+    assert output.strip().splitlines()[1].split()[4] == "."
