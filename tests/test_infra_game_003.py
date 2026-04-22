@@ -32,6 +32,14 @@ def test_game_infra_003_3_s1_cli_module_is_importable():
     spec.loader.exec_module(module)  # raises on ImportError
 
 
+def test_game_infra_003_4_s1_flag_test_module_is_discoverable():
+    # GIVEN - the tests/ directory exists in the project
+
+    # WHEN / THEN - a flag-related test file exists for pytest to discover
+    flag_test = Path(__file__).parent / "test_flag.py"
+    assert flag_test.exists(), "tests/test_flag.py not found"
+
+
 def test_game_infra_003_2_s1_dockerfile_installs_pytest():
     # GIVEN - the Docker image has been built successfully
 
