@@ -48,3 +48,17 @@ def test_game_infra_003_2_s1_dockerfile_installs_pytest():
     # WHEN / THEN - pytest is installed via pip inside the container
     assert "pip install" in content
     assert "pytest" in content
+
+
+def test_game_infra_003_4_s2_repository_supports_pytest_discovery_inside_docker():
+    # GIVEN - the repository root and tests/ directory
+    tests_dir = Path(__file__).parent
+    content = DOCKERFILE.read_text()
+
+    # WHEN / THEN - structure required for pytest discovery inside Docker is present
+    assert tests_dir.exists()
+    assert (tests_dir / "test_infra_game_003.py").exists()
+    assert (tests_dir / "test_flag.py").exists()
+    assert "COPY tests/" in content
+    assert "pytest" in content
+    assert "tests/" in content
