@@ -49,3 +49,17 @@ def test_cli_infra_001_4_s1_input_parser_test_module_is_discoverable():
     assert (
         Path(__file__).parent / "test_input_parser.py"
     ).exists(), "tests/test_input_parser.py not found"
+
+
+def test_cli_infra_001_4_s2_repository_supports_pytest_discovery_inside_docker():
+    # GIVEN - the repository root and tests/ directory
+    tests_dir = Path(__file__).parent
+    content = DOCKERFILE.read_text()
+
+    # WHEN / THEN - structure required for pytest discovery inside Docker is present
+    assert tests_dir.exists()
+    assert (tests_dir / "test_infra_cli_001.py").exists()
+    assert (tests_dir / "test_input_parser.py").exists()
+    assert "COPY tests/" in content
+    assert "pytest" in content
+    assert "tests/" in content
