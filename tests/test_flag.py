@@ -25,3 +25,16 @@ def test_game_be_003_1_s2_toggle_flag_sets_flagged_false_on_flagged_cell():
 
     # THEN
     assert board.cell(1, 4).flagged is False
+
+
+def test_game_be_003_2_s1_toggle_flag_on_revealed_cell_is_noop():
+    # GIVEN - cell (2, 2) is already revealed
+    board = Board(rows=3, cols=5, mines=0)
+    board.cell(2, 2).revealed = True
+    board.cell(2, 2).flagged = False
+
+    # WHEN
+    board.toggle_flag(2, 2)
+
+    # THEN - flagged state is unchanged and no exception raised
+    assert board.cell(2, 2).flagged is False
