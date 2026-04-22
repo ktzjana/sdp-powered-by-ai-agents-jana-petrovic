@@ -14,4 +14,6 @@ class InputParser:
         parts = raw.strip().split()
         if parts[0] == "r" and len(parts) == 3:
             return Command(action="reveal", row=int(parts[1]), col=int(parts[2]))
+        if parts[0] == "f" and len(parts) == 3:
+            return Command(action="flag", row=int(parts[1]), col=int(parts[2]))
         raise ValueError(f"Invalid input: {raw!r}")
