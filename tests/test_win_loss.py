@@ -197,3 +197,36 @@ def test_game_story_002_s1_loss_revealing_mine_ends_game_immediately():
     assert result.returncode == 0, result.stderr
     assert "BOOM! You hit a mine." in result.stdout
     assert "You win!" not in result.stdout
+
+
+def test_game_story_002_s2_win_revealing_last_safe_cell_ends_game():
+    # GIVEN - a 1x1 board with no mines (single safe cell)
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player reveals the only safe cell
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--rows",
+            "1",
+            "--cols",
+            "1",
+            "--mines",
+            "0",
+        ],
+        input="r 0 0\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - "You win!" printed, process exits 0, no loss message
+    assert result.returncode == 0, result.stderr
+    assert "You win!" in result.stdout
+    assert "BOOM!" not in result.stdout
