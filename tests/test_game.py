@@ -124,3 +124,36 @@ def test_game_story_001_s1_reveal_numbered_cell():
     output = BoardRenderer.render(board)
     assert "1" in output
     assert game.state.name == "PLAYING"
+
+
+def test_game_story_001_s2_reveal_mine_ends_game_as_loss():
+    # GIVEN - the game started with --seed 42 (mines at (0,0), (0,3), (4,0))
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player reveals the mine cell at (0,0)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--seed",
+            "42",
+            "--rows",
+            "5",
+            "--cols",
+            "5",
+            "--mines",
+            "3",
+        ],
+        input="r 0 0\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - loss message is printed; game loop exits
+    assert "BOOM! You hit a mine." in result.stdout
