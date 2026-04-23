@@ -104,3 +104,23 @@ def test_game_be_001_3_s2_check_win_returns_false_when_safe_cells_remain():
     # THEN
     assert game.check_win() is False
     assert game.state == GameState.PLAYING
+
+
+def test_game_story_001_s1_reveal_numbered_cell():
+    # GIVEN - a board with a safe cell (0,0) that has adjacent_count > 0
+    from minesweeper.renderer import BoardRenderer
+
+    board = Board(rows=2, cols=2, mines=0)
+    board.cell(0, 1).is_mine = True
+    board.compute_adjacent_counts()
+    game = Game(board)
+
+    # WHEN - the player reveals cell (0,0)
+    game.reveal(0, 0)
+
+    # THEN - cell is marked revealed; board renders adjacent count; game continues
+    assert board.cell(0, 0).revealed is True
+    assert board.cell(0, 0).adjacent_count == 1
+    output = BoardRenderer.render(board)
+    assert "1" in output
+    assert game.state.name == "PLAYING"
