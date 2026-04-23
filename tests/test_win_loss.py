@@ -58,3 +58,21 @@ def test_game_be_002_2_s1_game_enters_loss_state_on_mine_hit():
     assert game.state == GameState.LOSS
     game.reveal(0, 0)  # should be rejected
     assert board.cell(0, 0).revealed is False
+
+
+def test_game_be_002_2_s2_game_enters_win_state_after_check_win_passes():
+    # GIVEN - a 2x2 board with 1 mine; reveal all safe cells except the last
+    from minesweeper.game import GameState
+
+    board = Board(rows=2, cols=2, mines=0)
+    board.cell(0, 0).is_mine = True
+    board.compute_adjacent_counts()
+    game = Game(board)
+    game.reveal(0, 1)
+    game.reveal(1, 0)
+
+    # WHEN - the last safe cell is revealed
+    game.reveal(1, 1)
+
+    # THEN - game.state == WIN
+    assert game.state == GameState.WIN
