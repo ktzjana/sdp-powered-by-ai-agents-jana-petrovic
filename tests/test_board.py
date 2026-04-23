@@ -127,20 +127,48 @@ def test_board_story_001_s3_adjacent_counts_correct_after_placement():
 
 
 def test_board_story_001_s4_e2e_board_initialization():
-    # GIVEN - the player starts a new game with grid size 5x5 and 3 mines
-    # WHEN - the game initializes completely through the CLI
-    from minesweeper.renderer import BoardRenderer
+    # GIVEN - the player starts a new game with grid size 5x5 and 3 mines via CLI
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
 
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the game initializes completely through the CLI (EOF immediately)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--seed",
+            "42",
+            "--rows",
+            "5",
+            "--cols",
+            "5",
+            "--mines",
+            "3",
+        ],
+        input="",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - process exits cleanly
+    assert result.returncode == 0
+    # THEN - initial board rendered through CLI with all cells hidden
+    lines = [ln for ln in result.stdout.strip().splitlines() if ln.strip()]
+    assert len(lines) == 5
+    assert all(s == "." for line in lines for s in line.split())
+
+    # THEN - board created with exactly 25 cells, 3 mines, valid adjacent counts
+    import random
+
+    random.seed(42)
     board = Board(rows=5, cols=5, mines=3)
-
-    # THEN - exactly 25 cells
     assert len(board.grid) == 25
-    # THEN - exactly 3 mines
     assert sum(1 for c in board.grid if c.is_mine) == 3
-    # THEN - safe cells have correct adjacent_count (non-negative, <= 8)
     for cell in board.grid:
         if not cell.is_mine:
             assert 0 <= cell.adjacent_count <= 8
-    # THEN - initial board renders all cells as hidden
-    output = BoardRenderer.render(board)
-    assert all(s == "." for row in output.strip().splitlines() for s in row.split())
