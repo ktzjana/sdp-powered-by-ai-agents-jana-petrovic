@@ -40,3 +40,15 @@ def test_cli_infra_002_3_s1_cli_module_is_importable():
     spec = importlib.util.spec_from_file_location("minesweeper.cli", cli_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+
+
+def test_cli_infra_002_4_s1_rendering_tests_are_discoverable():
+    # GIVEN - the repository root and tests/ directory
+    tests_dir = Path(__file__).parent
+    content = DOCKERFILE.read_text()
+
+    # WHEN / THEN - structure required for rendering test discovery inside Docker
+    assert (tests_dir / "test_renderer.py").exists()
+    assert "COPY tests/" in content
+    assert "pytest" in content
+    assert "tests/" in content
