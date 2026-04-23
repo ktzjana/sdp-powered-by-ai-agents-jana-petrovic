@@ -230,3 +230,20 @@ def test_game_story_002_s2_win_revealing_last_safe_cell_ends_game():
     assert result.returncode == 0, result.stderr
     assert "You win!" in result.stdout
     assert "BOOM!" not in result.stdout
+
+
+def test_game_story_002_s3_game_continues_when_safe_cells_remain():
+    # GIVEN - multiple safe cells still unrevealed
+    from minesweeper.game import GameState
+
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(0, 0).is_mine = True
+    board.compute_adjacent_counts()
+    game = Game(board)
+
+    # WHEN - the player reveals one safe cell
+    game.reveal(1, 1)
+
+    # THEN - check_win returns False; game.state remains PLAYING
+    assert game.check_win() is False
+    assert game.state == GameState.PLAYING
