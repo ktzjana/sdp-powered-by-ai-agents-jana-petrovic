@@ -162,3 +162,38 @@ def test_game_fe_002_1_s2_loss_message_printed_on_mine_reveal():
     # THEN - "BOOM!" message printed and process exits cleanly
     assert result.returncode == 0, result.stderr
     assert "BOOM! You hit a mine." in result.stdout
+
+
+def test_game_story_002_s1_loss_revealing_mine_ends_game_immediately():
+    # GIVEN - board with known mine at (1,0) via seed 0
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player reveals the mine cell
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--rows",
+            "2",
+            "--cols",
+            "1",
+            "--mines",
+            "1",
+            "--seed",
+            "0",
+        ],
+        input="r 1 0\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - loss message printed, process exits 0, no further input accepted
+    assert result.returncode == 0, result.stderr
+    assert "BOOM! You hit a mine." in result.stdout
+    assert "You win!" not in result.stdout
