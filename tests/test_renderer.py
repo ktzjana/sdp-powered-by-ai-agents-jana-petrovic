@@ -60,3 +60,20 @@ def test_cli_be_002_1_s1_renderer_outputs_correct_rows_and_columns():
     assert len(rows) == 3
     for row in rows:
         assert len(row.split()) == 4
+
+
+def test_cli_be_002_1_s2_renderer_uses_distinct_symbols():
+    # GIVEN - (0,0) hidden, (0,1) flagged, (0,2) revealed with adjacent_count==1
+    board = Board(rows=1, cols=3, mines=0)
+    board.cell(0, 1).flagged = True
+    board.cell(0, 2).revealed = True
+    board.cell(0, 2).adjacent_count = 1
+
+    # WHEN
+    output = BoardRenderer.render(board)
+
+    # THEN
+    symbols = output.strip().split()
+    assert symbols[0] == "."
+    assert symbols[1] == "F"
+    assert symbols[2] == "1"
