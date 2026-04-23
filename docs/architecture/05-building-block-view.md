@@ -2,7 +2,7 @@
 
 ## 5.1 Level 1 — Container Diagram (C4)
 
-Diagram source: `architecture/diagrams/c4-container.puml`
+Diagram source: `docs/architecture/diagrams/c4-container.puml`
 
 ```plantuml
 @startuml c4-container
@@ -35,7 +35,7 @@ Rel(controller, domain, "Calls")
 
 ## 5.2 Level 2 — Component Diagram (C4)
 
-Diagram source: `architecture/diagrams/c4-component.puml`
+Diagram source: `docs/architecture/diagrams/c4-component.puml`
 
 ```plantuml
 @startuml c4-component
