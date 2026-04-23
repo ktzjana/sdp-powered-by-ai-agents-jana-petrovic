@@ -88,3 +88,22 @@ def test_board_story_001_s1_board_initialised_with_correct_dimensions():
     assert len(board.grid) == 25
     assert all(cell.revealed is False for cell in board.grid)
     assert all(cell.flagged is False for cell in board.grid)
+
+
+def test_board_story_001_s2_mines_placed_randomly_on_board():
+    # GIVEN - a 5x5 board with 3 mines
+    # WHEN - mine placement runs with different seeds
+    import random
+
+    random.seed(1)
+    board_a = Board(rows=5, cols=5, mines=3)
+    random.seed(2)
+    board_b = Board(rows=5, cols=5, mines=3)
+
+    mines_a = [i for i, c in enumerate(board_a.grid) if c.is_mine]
+    mines_b = [i for i, c in enumerate(board_b.grid) if c.is_mine]
+
+    # THEN - exactly 3 cells are mines; positions differ across different seeds
+    assert len(mines_a) == 3
+    assert len(mines_b) == 3
+    assert mines_a != mines_b
