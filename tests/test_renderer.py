@@ -238,3 +238,21 @@ def test_cli_story_002_s5_e2e_board_state_visible_after_each_action():
     assert "F" in result.stdout
     # At least 3 board renders: initial + after f + after r = 15 lines minimum
     assert len(result.stdout.splitlines()) >= 15
+
+
+def test_game_fe_001_1_s1_board_rerenders_after_successful_reveal():
+    # GIVEN - the game is running and the board is displayed
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(0, 1).is_mine = True
+    board.compute_adjacent_counts()
+
+    # WHEN - the player enters r 0 0 and the cell is safe
+    board.reveal(0, 0)
+    output = BoardRenderer.render(board)
+
+    # THEN - the updated board is printed to stdout
+    rows = output.strip().splitlines()
+    # revealed cell (0,0) shows its adjacent_count (1 mine neighbour at (0,1))
+    assert rows[0].split()[0] == "1"
+    # all other cells retain their previous hidden state
+    assert rows[0].split()[1] == "."
