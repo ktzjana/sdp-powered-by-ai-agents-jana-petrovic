@@ -157,6 +157,7 @@ def test_game_story_001_s2_reveal_mine_ends_game_as_loss():
 
     # THEN - loss message is printed; game loop exits
     assert "BOOM! You hit a mine." in result.stdout
+    assert result.returncode == 0
 
 
 def test_game_story_001_s3_reveal_empty_cell_triggers_flood_fill():
