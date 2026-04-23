@@ -76,3 +76,23 @@ def test_game_be_002_2_s2_game_enters_win_state_after_check_win_passes():
 
     # THEN - game.state == WIN
     assert game.state == GameState.WIN
+
+
+def test_game_be_002_3_s1_flagged_safe_cell_does_not_satisfy_win_condition():
+    # GIVEN - all safe cells except (2, 2) are revealed;
+    # (2, 2) is flagged but not revealed
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(0, 0).is_mine = True
+    board.compute_adjacent_counts()
+    game = Game(board)
+    for r in range(3):
+        for c in range(3):
+            if not board.cell(r, c).is_mine and (r, c) != (2, 2):
+                board.cell(r, c).revealed = True
+    board.cell(2, 2).flagged = True
+
+    # WHEN
+    result = game.check_win()
+
+    # THEN - flagged-but-unrevealed cell keeps check_win returning False
+    assert result is False
