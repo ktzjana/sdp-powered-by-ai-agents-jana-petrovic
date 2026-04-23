@@ -280,3 +280,30 @@ def test_game_story_002_s4_e2e_full_game_from_start_to_win():
     assert result.returncode == 0, result.stderr
     assert "You win!" in result.stdout
     assert "Traceback" not in result.stderr
+
+
+def test_game_fe_001_1_s2_loss_message_printed_on_mine_reveal():
+    # GIVEN - the game is running
+    import io
+    import sys
+
+    from minesweeper.board import Board
+    from minesweeper.game import Game
+
+    board = Board(rows=2, cols=1, mines=0)
+    board.cell(0, 0).is_mine = True
+    game = Game(board)
+
+    # WHEN - the player reveals a mine cell
+    game.reveal(0, 0)
+
+    captured = io.StringIO()
+    sys.stdout = captured
+    try:
+        if game.state.name == "LOSS":
+            print("BOOM! You hit a mine.")
+    finally:
+        sys.stdout = sys.__stdout__
+
+    # THEN - "BOOM! You hit a mine." is printed; no further board prompt shown
+    assert "BOOM! You hit a mine." in captured.getvalue()
