@@ -40,3 +40,21 @@ def test_game_be_002_1_s2_check_win_returns_false_when_safe_cell_unrevealed():
 
     # THEN
     assert result is False
+
+
+def test_game_be_002_2_s1_game_enters_loss_state_on_mine_hit():
+    # GIVEN - a board where cell (1, 1) is a mine
+    from minesweeper.game import GameState
+
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(1, 1).is_mine = True
+    board.compute_adjacent_counts()
+    game = Game(board)
+
+    # WHEN - Game.reveal hits the mine
+    game.reveal(1, 1)
+
+    # THEN - game.state == LOSS; subsequent reveal is a no-op
+    assert game.state == GameState.LOSS
+    game.reveal(0, 0)  # should be rejected
+    assert board.cell(0, 0).revealed is False
