@@ -77,3 +77,36 @@ def test_cli_be_002_1_s2_renderer_uses_distinct_symbols():
     assert symbols[0] == "."
     assert symbols[1] == "F"
     assert symbols[2] == "1"
+
+
+def test_cli_fe_002_1_s1_board_printed_after_reveal_action():
+    # GIVEN - the CLI is running with no mines
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player enters "r 0 0" then "q"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--rows",
+            "3",
+            "--cols",
+            "3",
+            "--mines",
+            "0",
+        ],
+        input="r 0 0\nq\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - initial board + updated board both printed before exit
+    assert result.returncode == 0, result.stderr
+    # Two renders: initial (3 rows) + after reveal (3 rows) = at least 6 lines
+    assert len(result.stdout.splitlines()) >= 6
