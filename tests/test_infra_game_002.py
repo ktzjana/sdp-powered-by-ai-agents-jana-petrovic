@@ -40,3 +40,12 @@ def test_game_infra_002_3_s1_cli_module_is_importable():
     spec = importlib.util.spec_from_file_location("minesweeper.cli", cli_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+
+
+def test_game_infra_002_4_s1_win_loss_test_module_is_discoverable():
+    # GIVEN - the tests/ directory exists in the project
+
+    # WHEN / THEN - a win/loss test file exists for pytest to discover
+    assert (
+        Path(__file__).parent / "test_win_loss.py"
+    ).exists(), "tests/test_win_loss.py not found"
