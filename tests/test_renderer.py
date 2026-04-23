@@ -210,3 +210,31 @@ def test_cli_story_002_s4_revealed_empty_cell_displays_blank_marker():
     first_row = output.splitlines()[0]
     # Row format: "sym sym" — first symbol is the empty-cell marker (space)
     assert first_row.startswith(" ")
+
+
+def test_cli_story_002_s5_e2e_board_state_visible_after_each_action():
+    # GIVEN - the game is started with --seed 42
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player enters r 0 0, f 0 1 (if unrevealed), q
+    # Use --mines 0 so (0,0) flood-fills but (0,1) stays unrevealed for flagging
+    # With seed 42 and 3 mines, flag before reveal to ensure (0,1) is unflagged
+    result = subprocess.run(
+        [sys.executable, "minesweeper/cli.py", "--seed", "42"],
+        input="f 0 1\nr 0 0\nq\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - both renders appear, F visible, process exits 0, no traceback
+    assert result.returncode == 0, result.stderr
+    assert "Traceback" not in result.stderr
+    assert "F" in result.stdout
+    # At least 3 board renders: initial + after f + after r = 15 lines minimum
+    assert len(result.stdout.splitlines()) >= 15
