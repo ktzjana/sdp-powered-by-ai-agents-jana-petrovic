@@ -26,3 +26,17 @@ def test_cli_infra_002_2_s1_dockerfile_installs_pytest():
     # WHEN / THEN - pytest is installed via pip inside the container
     assert "pip install" in content
     assert "pytest" in content
+
+
+def test_cli_infra_002_3_s1_cli_module_is_importable():
+    # GIVEN - the project is available inside the container
+
+    cli_path = Path(__file__).parent.parent / "minesweeper" / "cli.py"
+    assert cli_path.exists(), "minesweeper/cli.py not found"
+
+    import importlib.util
+
+    # WHEN / THEN - cli.py loads without ImportError
+    spec = importlib.util.spec_from_file_location("minesweeper.cli", cli_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
