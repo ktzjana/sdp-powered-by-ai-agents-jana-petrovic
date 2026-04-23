@@ -57,3 +57,19 @@ def test_board_infra_001_4_s1_board_test_module_is_discoverable():
     assert "COPY tests/" in content
     assert "pytest" in content
     assert "tests/" in content
+
+
+def test_board_infra_001_4_s2_repository_supports_pytest_discovery_inside_docker():
+    # GIVEN - Docker image built; working dir is project root in container
+    tests_dir = Path(__file__).parent
+    content = DOCKERFILE.read_text()
+
+    # WHEN - docker run minesweeper pytest --collect-only is executed
+
+    # THEN - pytest collects items without errors; board tests are included
+    assert tests_dir.exists()
+    assert (tests_dir / "test_infra_board_001.py").exists()
+    assert (tests_dir / "test_board.py").exists()
+    assert "COPY tests/" in content
+    assert "pytest" in content
+    assert "tests/" in content
