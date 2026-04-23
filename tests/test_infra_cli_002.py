@@ -52,3 +52,17 @@ def test_cli_infra_002_4_s1_rendering_tests_are_discoverable():
     assert "COPY tests/" in content
     assert "pytest" in content
     assert "tests/" in content
+
+
+def test_cli_infra_002_4_s2_repository_supports_pytest_discovery_inside_docker():
+    # GIVEN - the repository root and tests/ directory
+    tests_dir = Path(__file__).parent
+    content = DOCKERFILE.read_text()
+
+    # WHEN / THEN - structure required for pytest discovery inside Docker is present
+    assert tests_dir.exists()
+    assert (tests_dir / "test_infra_cli_002.py").exists()
+    assert (tests_dir / "test_renderer.py").exists()
+    assert "COPY tests/" in content
+    assert "pytest" in content
+    assert "tests/" in content
