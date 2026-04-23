@@ -107,3 +107,20 @@ def test_board_story_001_s2_mines_placed_randomly_on_board():
     assert len(mines_a) == 3
     assert len(mines_b) == 3
     assert mines_a != mines_b
+
+
+def test_board_story_001_s3_adjacent_counts_correct_after_placement():
+    # GIVEN - mines have been placed on the board
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(0, 0).is_mine = True
+    board.cell(0, 1).is_mine = True
+    board.compute_adjacent_counts()
+
+    # WHEN - mine placement completes
+
+    # THEN - every safe cell has adjacent_count equal to neighbouring mines
+    assert board.cell(1, 1).adjacent_count == 2
+    assert board.cell(0, 2).adjacent_count == 1
+    # THEN - mine cells are not assigned an adjacent count (remain 0)
+    assert board.cell(0, 0).adjacent_count == 0
+    assert board.cell(0, 1).adjacent_count == 0
