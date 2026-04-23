@@ -214,3 +214,31 @@ def test_cli_story_001_s4_quit_command_exits_cleanly():
     assert result.returncode == 0, result.stderr
     assert "Traceback" not in result.stdout
     assert "Traceback" not in result.stderr
+
+
+def test_cli_story_001_s5_e2e_sequence_of_valid_and_invalid_commands():
+    # GIVEN - the game is started with --seed 42
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player enters xyz, f 4 4 (flag first), r 0 0, q
+    result = subprocess.run(
+        [sys.executable, "minesweeper/cli.py", "--seed", "42"],
+        input="xyz\nf 4 4\nr 0 0\nq\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN
+    assert result.returncode == 0, result.stderr
+    assert "Traceback" not in result.stderr
+    usage = "Usage: r <row> <col> | f <row> <col> | q"
+    assert result.stdout.count(usage) == 1  # xyz triggers exactly one hint
+    assert "F" in result.stdout  # f 4 4 renders F before reveal
+    # board re-renders after f 4 4 and r 0 0: at least 3 boards (initial + 2)
+    assert len(result.stdout.splitlines()) >= 15
