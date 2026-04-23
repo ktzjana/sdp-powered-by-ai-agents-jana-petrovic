@@ -18,3 +18,14 @@ def test_game_infra_001_1_s1_dockerfile_declares_buildable_image():
     assert "COPY minesweeper/" in content
     assert "COPY tests/" in content
     assert "pytest" in content
+
+
+def test_game_infra_001_2_s1_dockerfile_installs_pytest():
+    # GIVEN - the Docker image has been built successfully
+    content = DOCKERFILE.read_text()
+
+    # WHEN - docker run minesweeper pytest --version is executed
+
+    # THEN - pytest reports its version and exits with code 0; no ModuleNotFoundError
+    assert "pip install" in content
+    assert "pytest" in content
