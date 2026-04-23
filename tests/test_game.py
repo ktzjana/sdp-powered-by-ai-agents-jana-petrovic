@@ -180,3 +180,40 @@ def test_game_story_001_s3_reveal_empty_cell_triggers_flood_fill():
     assert board.cell(2, 0).revealed is True
     # THEN - mine cell is not revealed
     assert board.cell(2, 2).revealed is False
+
+
+def test_game_story_001_s4_e2e_player_reveals_until_mine_hit():
+    # GIVEN - game started with --seed 42 (mines at (0,0),(0,3),(4,0))
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - player reveals safe cell (0,1) then mine cell (0,0)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--seed",
+            "42",
+            "--rows",
+            "5",
+            "--cols",
+            "5",
+            "--mines",
+            "3",
+        ],
+        input="r 0 1\nr 0 0\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - board rendered with revealed numeric cell after safe reveal
+    # (0,1) has adjacent_count=1, so "1" appears only after the reveal
+    assert "1" in result.stdout
+    # THEN - loss message printed and process exits
+    assert "BOOM! You hit a mine." in result.stdout
+    assert result.returncode == 0
