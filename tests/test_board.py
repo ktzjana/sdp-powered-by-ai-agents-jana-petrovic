@@ -77,3 +77,14 @@ def test_board_be_001_3_s2_corner_safe_cell_considers_only_valid_neighbours():
 
     # THEN - only in-bounds neighbours are counted; no IndexError or over-count
     assert result == 1
+
+
+def test_board_story_001_s1_board_initialised_with_correct_dimensions():
+    # GIVEN - the player starts the game with grid size 5x5 and 3 mines
+    # WHEN - the board is created
+    board = Board(rows=5, cols=5, mines=3)
+
+    # THEN - exactly 25 cells; every cell starts unrevealed and unflagged
+    assert len(board.grid) == 25
+    assert all(cell.revealed is False for cell in board.grid)
+    assert all(cell.flagged is False for cell in board.grid)
