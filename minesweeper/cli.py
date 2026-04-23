@@ -48,6 +48,12 @@ def main():
                 continue
             game.reveal(row, col)
             print(BoardRenderer.render(board), end="")
+            if game.state.name == "WIN":
+                print("You win!")
+                break
+            if game.state.name == "LOSS":
+                print("BOOM! You hit a mine.")
+                break
         else:
             print("Usage: r <row> <col> | f <row> <col> | q")
 

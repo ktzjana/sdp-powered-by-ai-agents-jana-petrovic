@@ -96,3 +96,35 @@ def test_game_be_002_3_s1_flagged_safe_cell_does_not_satisfy_win_condition():
 
     # THEN - flagged-but-unrevealed cell keeps check_win returning False
     assert result is False
+
+
+def test_game_fe_002_1_s1_win_message_printed_on_game_completion():
+    # GIVEN - a 1x1 board with no mines (revealing the only cell wins immediately)
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player reveals the only safe cell
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--rows",
+            "1",
+            "--cols",
+            "1",
+            "--mines",
+            "0",
+        ],
+        input="r 0 0\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - "You win!" is printed and process exits cleanly
+    assert result.returncode == 0, result.stderr
+    assert "You win!" in result.stdout
