@@ -157,3 +157,26 @@ def test_game_story_001_s2_reveal_mine_ends_game_as_loss():
 
     # THEN - loss message is printed; game loop exits
     assert "BOOM! You hit a mine." in result.stdout
+
+
+def test_game_story_001_s3_reveal_empty_cell_triggers_flood_fill():
+    # GIVEN - a board where (0,0) is empty (adjacent_count==0, no mine)
+    # Layout: mine only at (2,2); (0,0),(0,1),(1,0),(1,1) are empty
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(2, 2).is_mine = True
+    board.compute_adjacent_counts()
+    game = Game(board)
+
+    # WHEN - the player reveals (0,0)
+    game.reveal(0, 0)
+
+    # THEN - (0,0) and connected empty cells are revealed
+    assert board.cell(0, 0).revealed is True
+    assert board.cell(0, 1).revealed is True
+    assert board.cell(1, 0).revealed is True
+    assert board.cell(1, 1).revealed is True
+    # THEN - numbered border cells adjacent to empty region are also revealed
+    assert board.cell(0, 2).revealed is True
+    assert board.cell(2, 0).revealed is True
+    # THEN - mine cell is not revealed
+    assert board.cell(2, 2).revealed is False
