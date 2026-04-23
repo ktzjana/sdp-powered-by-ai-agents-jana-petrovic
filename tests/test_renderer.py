@@ -46,3 +46,17 @@ def test_game_fe_003_1_s2_unflagged_cell_reverts_to_hidden_marker():
     # THEN - position (1, 4) displays the hidden symbol again
     rows = output.strip().splitlines()
     assert rows[1].split()[4] == "."
+
+
+def test_cli_be_002_1_s1_renderer_outputs_correct_rows_and_columns():
+    # GIVEN - a 3x4 board with all cells hidden
+    board = Board(rows=3, cols=4, mines=0)
+
+    # WHEN
+    output = BoardRenderer.render(board)
+
+    # THEN - exactly 3 rows, each with exactly 4 cell symbols
+    rows = output.strip().splitlines()
+    assert len(rows) == 3
+    for row in rows:
+        assert len(row.split()) == 4
