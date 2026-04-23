@@ -247,3 +247,36 @@ def test_game_story_002_s3_game_continues_when_safe_cells_remain():
     # THEN - check_win returns False; game.state remains PLAYING
     assert game.check_win() is False
     assert game.state == GameState.PLAYING
+
+
+def test_game_story_002_s4_e2e_full_game_from_start_to_win():
+    # GIVEN - a 1x1 board with no mines started via CLI
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player reveals all safe cells (the single cell)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--rows",
+            "1",
+            "--cols",
+            "1",
+            "--mines",
+            "0",
+        ],
+        input="r 0 0\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - "You win!" printed, process exits 0, no traceback
+    assert result.returncode == 0, result.stderr
+    assert "You win!" in result.stdout
+    assert "Traceback" not in result.stderr
