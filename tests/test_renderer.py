@@ -160,3 +160,21 @@ def test_cli_story_002_s1_hidden_cells_render_as_hidden_symbol():
         symbols = row.split()
         assert len(symbols) == 5
         assert all(s == "." for s in symbols)
+
+
+def test_cli_story_002_s2_revealed_numbered_cell_shows_adjacent_count():
+    # GIVEN - cell (2, 3) is revealed with adjacent_count == 2
+    board = Board(rows=5, cols=5, mines=0)
+    board.cell(2, 3).revealed = True
+    board.cell(2, 3).adjacent_count = 2
+
+    # WHEN
+    output = BoardRenderer.render(board)
+
+    # THEN - (2, 3) displays "2"; all other cells display "."
+    rows = output.strip().splitlines()
+    assert rows[2].split()[3] == "2"
+    for r_idx, row in enumerate(rows):
+        for c_idx, sym in enumerate(row.split()):
+            if (r_idx, c_idx) != (2, 3):
+                assert sym == "."
