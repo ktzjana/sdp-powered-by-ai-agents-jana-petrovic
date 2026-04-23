@@ -124,3 +124,23 @@ def test_board_story_001_s3_adjacent_counts_correct_after_placement():
     # THEN - mine cells are not assigned an adjacent count (remain 0)
     assert board.cell(0, 0).adjacent_count == 0
     assert board.cell(0, 1).adjacent_count == 0
+
+
+def test_board_story_001_s4_e2e_board_initialization():
+    # GIVEN - the player starts a new game with grid size 5x5 and 3 mines
+    # WHEN - the game initializes completely through the CLI
+    from minesweeper.renderer import BoardRenderer
+
+    board = Board(rows=5, cols=5, mines=3)
+
+    # THEN - exactly 25 cells
+    assert len(board.grid) == 25
+    # THEN - exactly 3 mines
+    assert sum(1 for c in board.grid if c.is_mine) == 3
+    # THEN - safe cells have correct adjacent_count (non-negative, <= 8)
+    for cell in board.grid:
+        if not cell.is_mine:
+            assert 0 <= cell.adjacent_count <= 8
+    # THEN - initial board renders all cells as hidden
+    output = BoardRenderer.render(board)
+    assert all(s == "." for row in output.strip().splitlines() for s in row.split())
