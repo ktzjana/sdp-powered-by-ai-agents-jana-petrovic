@@ -178,3 +178,20 @@ def test_cli_story_002_s2_revealed_numbered_cell_shows_adjacent_count():
         for c_idx, sym in enumerate(row.split()):
             if (r_idx, c_idx) != (2, 3):
                 assert sym == "."
+
+
+def test_cli_story_002_s3_flagged_cell_displays_flag_marker():
+    # GIVEN - cell (1, 4) is flagged and not revealed
+    board = Board(rows=3, cols=5, mines=0)
+    board.cell(1, 4).flagged = True
+
+    # WHEN
+    output = BoardRenderer.render(board)
+
+    # THEN - (1, 4) displays "F"; all other cells display "."
+    rows = output.strip().splitlines()
+    assert rows[1].split()[4] == "F"
+    for r_idx, row in enumerate(rows):
+        for c_idx, sym in enumerate(row.split()):
+            if (r_idx, c_idx) != (1, 4):
+                assert sym == "."
