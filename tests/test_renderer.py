@@ -195,3 +195,18 @@ def test_cli_story_002_s3_flagged_cell_displays_flag_marker():
         for c_idx, sym in enumerate(row.split()):
             if (r_idx, c_idx) != (1, 4):
                 assert sym == "."
+
+
+def test_cli_story_002_s4_revealed_empty_cell_displays_blank_marker():
+    # GIVEN - cell (0, 0) is revealed with adjacent_count == 0
+    board = Board(rows=2, cols=2, mines=0)
+    board.cell(0, 0).revealed = True
+    board.cell(0, 0).adjacent_count = 0
+
+    # WHEN
+    output = BoardRenderer.render(board)
+
+    # THEN - (0, 0) displays a blank/space marker (project convention)
+    first_row = output.splitlines()[0]
+    # Row format: "sym sym" — first symbol is the empty-cell marker (space)
+    assert first_row.startswith(" ")
