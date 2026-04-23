@@ -144,3 +144,19 @@ def test_cli_fe_002_1_s2_board_printed_after_flag_action():
     assert "F" in result.stdout
     lines = result.stdout.splitlines()
     assert any(ln.split() and ln.split()[1] == "F" for ln in lines)
+
+
+def test_cli_story_002_s1_hidden_cells_render_as_hidden_symbol():
+    # GIVEN - a 4x5 board with no cells revealed or flagged
+    board = Board(rows=4, cols=5, mines=0)
+
+    # WHEN
+    output = BoardRenderer.render(board)
+
+    # THEN - every cell displays "." and grid matches configured dimensions
+    rows = output.strip().splitlines()
+    assert len(rows) == 4
+    for row in rows:
+        symbols = row.split()
+        assert len(symbols) == 5
+        assert all(s == "." for s in symbols)
