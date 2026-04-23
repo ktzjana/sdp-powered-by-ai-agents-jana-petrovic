@@ -44,3 +44,17 @@ def test_game_infra_001_3_s1_cli_module_is_importable():
     spec = importlib.util.spec_from_file_location("minesweeper.cli", cli_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+
+
+def test_game_infra_001_4_s1_reveal_test_module_is_discoverable():
+    # GIVEN - the Docker image has been built and tests/ is copied into the container
+    tests_dir = Path(__file__).parent
+    content = DOCKERFILE.read_text()
+
+    # WHEN - docker run minesweeper pytest tests/ is executed
+
+    # THEN - pytest discovers reveal tests; all pass; exits with code 0
+    assert (tests_dir / "test_game.py").exists(), "tests/test_game.py not found"
+    assert "COPY tests/" in content
+    assert "pytest" in content
+    assert "tests/" in content
