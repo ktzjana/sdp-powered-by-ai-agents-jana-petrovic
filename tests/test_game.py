@@ -104,3 +104,116 @@ def test_game_be_001_3_s2_check_win_returns_false_when_safe_cells_remain():
     # THEN
     assert game.check_win() is False
     assert game.state == GameState.PLAYING
+
+
+def test_game_story_001_s1_reveal_numbered_cell():
+    # GIVEN - a board with a safe cell (0,0) that has adjacent_count > 0
+    from minesweeper.renderer import BoardRenderer
+
+    board = Board(rows=2, cols=2, mines=0)
+    board.cell(0, 1).is_mine = True
+    board.compute_adjacent_counts()
+    game = Game(board)
+
+    # WHEN - the player reveals cell (0,0)
+    game.reveal(0, 0)
+
+    # THEN - cell is marked revealed; board renders adjacent count; game continues
+    assert board.cell(0, 0).revealed is True
+    assert board.cell(0, 0).adjacent_count == 1
+    output = BoardRenderer.render(board)
+    assert "1" in output
+    assert game.state.name == "PLAYING"
+
+
+def test_game_story_001_s2_reveal_mine_ends_game_as_loss():
+    # GIVEN - the game started with --seed 42 (mines at (0,0), (0,3), (4,0))
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the player reveals the mine cell at (0,0)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--seed",
+            "42",
+            "--rows",
+            "5",
+            "--cols",
+            "5",
+            "--mines",
+            "3",
+        ],
+        input="r 0 0\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - loss message is printed; game loop exits
+    assert "BOOM! You hit a mine." in result.stdout
+
+
+def test_game_story_001_s3_reveal_empty_cell_triggers_flood_fill():
+    # GIVEN - a board where (0,0) is empty (adjacent_count==0, no mine)
+    # Layout: mine only at (2,2); (0,0),(0,1),(1,0),(1,1) are empty
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(2, 2).is_mine = True
+    board.compute_adjacent_counts()
+    game = Game(board)
+
+    # WHEN - the player reveals (0,0)
+    game.reveal(0, 0)
+
+    # THEN - (0,0) and connected empty cells are revealed
+    assert board.cell(0, 0).revealed is True
+    assert board.cell(0, 1).revealed is True
+    assert board.cell(1, 0).revealed is True
+    assert board.cell(1, 1).revealed is True
+    # THEN - numbered border cells adjacent to empty region are also revealed
+    assert board.cell(0, 2).revealed is True
+    assert board.cell(2, 0).revealed is True
+    # THEN - mine cell is not revealed
+    assert board.cell(2, 2).revealed is False
+
+
+def test_game_story_001_s4_e2e_player_reveals_until_mine_hit():
+    # GIVEN - game started with --seed 42 (mines at (0,0),(0,3),(4,0))
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - player reveals safe cell (0,1) then mine cell (0,0)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--seed",
+            "42",
+            "--rows",
+            "5",
+            "--cols",
+            "5",
+            "--mines",
+            "3",
+        ],
+        input="r 0 1\nr 0 0\n",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - board rendered with revealed numeric cell after safe reveal
+    # (0,1) has adjacent_count=1, so "1" appears only after the reveal
+    assert "1" in result.stdout
+    # THEN - loss message printed and process exits
+    assert "BOOM! You hit a mine." in result.stdout
+    assert result.returncode == 0
