@@ -6,20 +6,9 @@ Minesweeper is a single-process CLI application. There is no server, container i
 
 ## 7.2 Deployment Diagram (C4 Level)
 
+![Deployment Diagram](diagrams/deployment.svg)
+
 Diagram source: `docs/architecture/diagrams/deployment.puml`
-
-```plantuml
-@startuml deployment
-!include c4-lib/C4_Deployment.puml
-
-Deployment_Node(machine, "Developer Machine", "Any OS with Python 3.10+") {
-  Deployment_Node(runtime, "Python Interpreter", "CPython 3.10+") {
-    Container(app, "Minesweeper", "Python", "cli.py entry point; all modules loaded in-process")
-  }
-}
-
-@enduml
-```
 
 ## 7.3 How to Run
 
