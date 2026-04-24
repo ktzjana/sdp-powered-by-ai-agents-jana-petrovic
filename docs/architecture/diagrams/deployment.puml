@@ -1,9 +1,11 @@
 @startuml deployment
 !include c4-lib/C4_Deployment.puml
 
-Deployment_Node(machine, "Developer Machine", "Any OS with Python 3.10+") {
-  Deployment_Node(runtime, "Python Interpreter", "CPython 3.10+") {
-    Container(app, "Minesweeper", "Python", "cli.py entry point; all modules loaded in-process")
+Deployment_Node(machine, "Developer Machine", "Any OS with Docker") {
+  Deployment_Node(docker, "Docker Engine", "Local container runtime") {
+    Deployment_Node(runtime, "Minesweeper Container", "python:3.12-slim") {
+      Container(app, "Minesweeper", "Python", "pytest default CMD; optional cli.py interactive run")
+    }
   }
 }
 

@@ -11,8 +11,8 @@ Diagram source: `docs/architecture/diagrams/c4-container.puml`
 | Container       | Module        | Responsibility                                      |
 |-----------------|---------------|-----------------------------------------------------|
 | CLI             | `cli.py`      | Parse stdin input, invoke controller, render output.|
-| Game Controller | `game.py`     | Game loop, win/loss detection, command dispatch.    |
-| Domain          | `board.py`, `cell.py` | Board state, mine placement, reveal/flag rules. |
+| Game Controller | `game.py`     | Reveal/flag orchestration and win/loss state transitions. |
+| Domain          | `board.py`    | Board state, mine placement, reveal/flag rules.     |
 
 ---
 
@@ -26,13 +26,13 @@ Diagram source: `docs/architecture/diagrams/c4-component.puml`
 
 | Component     | Location        | Responsibility                                              |
 |---------------|-----------------|-------------------------------------------------------------|
-| Board         | `board.py`      | 2D grid of cells; exposes reveal/flag operations.           |
-| Cell          | `cell.py`       | Data class: `is_mine`, `adjacent_count`, `revealed`, `flagged`. |
+| Board         | `board.py`      | 2D grid of  cells; exposes reveal/flag operations.           |
+| Cell          | `board.py`      | Data class: `is_mine`, `adjacent_count`, `revealed`, `flagged`. |
 | MinePlacer    | `board.py`      | Randomly places mines and computes adjacent counts.         |
 | RevealService | `board.py`      | Reveals a cell; recursively reveals neighbours if empty.    |
-| Game          | `game.py`       | Runs the game loop; checks win/loss after each action.      |
-| BoardRenderer | `cli.py`        | Renders the board grid and status line to stdout.           |
-| InputParser   | `cli.py`        | Parses `"r 2 3"` / `"f 1 4"` into structured commands.     |
+| Game          | `game.py`       | Applies reveal/flag actions and updates game state (`PLAYING`/`WIN`/`LOSS`). |
+| BoardRenderer | `renderer.py`   | Renders the board grid and status line to stdout.           |
+| InputParser   | `input_parser.py` | Utility parser for `"r 2 3"` / `"f 1 4"` command objects (not wired into the main CLI loop). |
 
 ---
 
@@ -40,8 +40,9 @@ Diagram source: `docs/architecture/diagrams/c4-component.puml`
 
 ```
 minesweeper/
-├── cell.py       # Cell data class
 ├── board.py      # Board, MinePlacer, RevealService
+├── input_parser.py # InputParser + Command
+├── renderer.py   # BoardRenderer
 ├── game.py       # Game controller
-└── cli.py        # InputParser, BoardRenderer, entry point
+└── cli.py        # CLI entry point
 ```

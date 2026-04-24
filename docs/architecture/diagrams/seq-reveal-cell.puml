@@ -5,7 +5,6 @@ participant Game
 participant Board
 
 Player -> CLI : "r 2 3"
-CLI -> CLI : InputParser.parse("r 2 3")
 CLI -> Game : reveal(row=2, col=3)
 Game -> Board : reveal(2, 3)
 alt cell is mine

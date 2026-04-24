@@ -4,7 +4,7 @@
 
 | ID   | Constraint                                                      |
 |------|-----------------------------------------------------------------|
-| TC-1 | Implementation language is Python (3.10+).                      |
+| TC-1 | Implementation language is Python (3.12+).                      |
 | TC-2 | Interface is CLI only; no GUI, web, or API layer.               |
 | TC-3 | No database or persistent storage; all state is in-memory.      |
 | TC-4 | No external runtime dependencies required (stdlib only).        |

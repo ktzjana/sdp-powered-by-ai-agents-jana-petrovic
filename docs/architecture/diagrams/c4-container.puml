@@ -5,12 +5,12 @@ Person(player, "Player", "Interacts via terminal")
 
 System_Boundary(minesweeper, "Minesweeper") {
   Container(cli, "CLI", "Python module", "Reads stdin, renders board to stdout")
-  Container(controller, "Game Controller", "Python module", "Orchestrates game loop and input handling")
+  Container(controller, "Game Controller", "Python module", "Applies game actions and win/loss transitions")
   Container(domain, "Domain", "Python module", "Board state, mine placement, reveal/flag logic")
 }
 
 Rel(player, cli, "Types commands", "stdin/stdout")
-Rel(cli, controller, "Parsed command")
+Rel(cli, controller, "Reveal/flag command")
 Rel(controller, domain, "Calls")
 
 @enduml

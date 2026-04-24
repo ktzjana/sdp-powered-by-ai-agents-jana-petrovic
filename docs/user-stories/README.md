@@ -4,8 +4,8 @@
 
 The following domains are derived from the bounded contexts identified in the architecture:
 
-- **BOARD** — Domain layer: holds the cell grid, manages mine placement, tracks revealed/flagged state, and executes the flood-fill reveal logic (`board.py`, `cell.py`)
-- **GAME** — Game Controller layer: orchestrates the game loop, dispatches reveal/flag commands to the domain, and evaluates win/loss conditions (`game.py`)
+- **BOARD** — Domain layer: holds the cell grid, manages mine placement, tracks revealed/flagged state, and executes the flood-fill reveal logic (`board.py`)
+- **GAME** — Game Controller layer: applies reveal/flag actions, dispatches to the domain, and evaluates win/loss conditions (`game.py`)
 - **CLI** — Presentation layer: parses player input from stdin, invokes the controller, and renders the board to stdout (`cli.py`)
 
 These domains directly map to the containers defined in the Building Block View (Chapter 5) and are used as the basis for story IDs and traceability.
@@ -33,7 +33,7 @@ These domains directly map to the containers defined in the Building Block View 
 
 - `MinePlacer` — stateless service that randomly distributes mines across the board and computes adjacent counts for all safe cells (Chapter 5 Building Block View)
 - `RevealService` — stateless service that reveals a cell and recursively triggers flood-fill for empty cells (Chapter 5 Building Block View, Chapter 6 Runtime View)
-- `Game` — stateless orchestration service that runs the game loop and checks win/loss after every player action (Chapter 5 Building Block View)
+- `Game` — orchestration service that applies actions and updates win/loss state after each player action (Chapter 5 Building Block View)
 
 ---
 
