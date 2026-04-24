@@ -4,7 +4,7 @@ name: Deploy Documentation
 
 on:
   push:
-    branches: [main, feature/module-6-final-project]
+    branches: [main, feature/module-6-final-project, docs/sync-architecture-with-code]
     paths:
       - 'README.md'
       - 'docs/**'
