@@ -77,3 +77,98 @@ def test_board_be_001_3_s2_corner_safe_cell_considers_only_valid_neighbours():
 
     # THEN - only in-bounds neighbours are counted; no IndexError or over-count
     assert result == 1
+
+
+def test_board_story_001_s1_board_initialised_with_correct_dimensions():
+    # GIVEN - the player starts the game with grid size 5x5 and 3 mines
+    # WHEN - the board is created
+    board = Board(rows=5, cols=5, mines=3)
+
+    # THEN - exactly 25 cells; every cell starts unrevealed and unflagged
+    assert len(board.grid) == 25
+    assert all(cell.revealed is False for cell in board.grid)
+    assert all(cell.flagged is False for cell in board.grid)
+
+
+def test_board_story_001_s2_mines_placed_randomly_on_board():
+    # GIVEN - a 5x5 board with 3 mines
+    # WHEN - mine placement runs with different seeds
+    import random
+
+    random.seed(1)
+    board_a = Board(rows=5, cols=5, mines=3)
+    random.seed(2)
+    board_b = Board(rows=5, cols=5, mines=3)
+
+    mines_a = [i for i, c in enumerate(board_a.grid) if c.is_mine]
+    mines_b = [i for i, c in enumerate(board_b.grid) if c.is_mine]
+
+    # THEN - exactly 3 cells are mines; positions differ across different seeds
+    assert len(mines_a) == 3
+    assert len(mines_b) == 3
+    assert mines_a != mines_b
+
+
+def test_board_story_001_s3_adjacent_counts_correct_after_placement():
+    # GIVEN - mines have been placed on the board
+    board = Board(rows=3, cols=3, mines=0)
+    board.cell(0, 0).is_mine = True
+    board.cell(0, 1).is_mine = True
+    board.compute_adjacent_counts()
+
+    # WHEN - mine placement completes
+
+    # THEN - every safe cell has adjacent_count equal to neighbouring mines
+    assert board.cell(1, 1).adjacent_count == 2
+    assert board.cell(0, 2).adjacent_count == 1
+    # THEN - mine cells are not assigned an adjacent count (remain 0)
+    assert board.cell(0, 0).adjacent_count == 0
+    assert board.cell(0, 1).adjacent_count == 0
+
+
+def test_board_story_001_s4_e2e_board_initialization():
+    # GIVEN - the player starts a new game with grid size 5x5 and 3 mines via CLI
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+
+    # WHEN - the game initializes completely through the CLI (EOF immediately)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "minesweeper/cli.py",
+            "--seed",
+            "42",
+            "--rows",
+            "5",
+            "--cols",
+            "5",
+            "--mines",
+            "3",
+        ],
+        input="",
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    # THEN - process exits cleanly
+    assert result.returncode == 0
+    # THEN - initial board rendered through CLI with all cells hidden
+    lines = [ln for ln in result.stdout.strip().splitlines() if ln.strip()]
+    assert len(lines) == 5
+    assert all(s == "." for line in lines for s in line.split())
+
+    # THEN - board created with exactly 25 cells, 3 mines, valid adjacent counts
+    import random
+
+    random.seed(42)
+    board = Board(rows=5, cols=5, mines=3)
+    assert len(board.grid) == 25
+    assert sum(1 for c in board.grid if c.is_mine) == 3
+    for cell in board.grid:
+        if not cell.is_mine:
+            assert 0 <= cell.adjacent_count <= 8

@@ -6,7 +6,7 @@ Three key scenarios are documented below.
 
 ## 6.1 Scenario: Reveal a Cell
 
-Diagram source: `architecture/diagrams/seq-reveal-cell.puml`
+Diagram source: `docs/architecture/diagrams/seq-reveal-cell.puml`
 
 ```plantuml
 @startuml seq-reveal-cell
@@ -42,7 +42,7 @@ end
 
 ## 6.2 Scenario: Flag a Cell
 
-Diagram source: `architecture/diagrams/seq-flag-cell.puml`
+Diagram source: `docs/architecture/diagrams/seq-flag-cell.puml`
 
 ```plantuml
 @startuml seq-flag-cell
@@ -65,7 +65,7 @@ CLI --> Player : rendered board
 
 ## 6.3 Scenario: Win Condition
 
-Diagram source: `architecture/diagrams/seq-win.puml`
+Diagram source: `docs/architecture/diagrams/seq-win.puml`
 
 ```plantuml
 @startuml seq-win

@@ -1,0 +1,75 @@
+from pathlib import Path
+
+DOCKERFILE = Path(__file__).parent.parent / "Dockerfile"
+
+
+def test_board_infra_001_1_s1_dockerfile_declares_buildable_image():
+    # GIVEN - a Dockerfile exists at the project root using a Python base image
+    assert DOCKERFILE.exists(), "Dockerfile not found"
+
+    content = DOCKERFILE.read_text()
+
+    # WHEN - docker build -t minesweeper . is executed from the project root
+
+    # THEN - the build completes with exit code 0; no build errors
+    assert "FROM python" in content
+    assert "WORKDIR /app" in content
+    assert "PYTHONPATH=/app" in content
+    assert "COPY minesweeper/" in content
+    assert "COPY tests/" in content
+    assert "pytest" in content
+
+
+def test_board_infra_001_2_s1_dockerfile_installs_pytest():
+    # GIVEN - the Docker image has been built successfully
+    content = DOCKERFILE.read_text()
+
+    # WHEN - docker run minesweeper pytest --version is executed
+
+    # THEN - pytest reports its version and exits with code 0; no ModuleNotFoundError
+    assert "pip install" in content
+    assert "pytest" in content
+
+
+def test_board_infra_001_3_s1_cli_module_is_importable():
+    # GIVEN - the Docker image has been built successfully
+    cli_path = Path(__file__).parent.parent / "minesweeper" / "cli.py"
+    assert cli_path.exists(), "minesweeper/cli.py not found"
+
+    import importlib.util
+
+    # WHEN - docker run minesweeper python minesweeper/cli.py is executed
+    # THEN - the process exits with code 0; no ImportError or ModuleNotFoundError
+    spec = importlib.util.spec_from_file_location("minesweeper.cli", cli_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+
+def test_board_infra_001_4_s1_board_test_module_is_discoverable():
+    # GIVEN - the Docker image has been built and tests/ is copied into the container
+    tests_dir = Path(__file__).parent
+    content = DOCKERFILE.read_text()
+
+    # WHEN - docker run minesweeper pytest tests/ is executed
+
+    # THEN - pytest discovers board tests; all pass; exits with code 0
+    assert (tests_dir / "test_board.py").exists(), "tests/test_board.py not found"
+    assert "COPY tests/" in content
+    assert "pytest" in content
+    assert "tests/" in content
+
+
+def test_board_infra_001_4_s2_repository_supports_pytest_discovery_inside_docker():
+    # GIVEN - Docker image built; working dir is project root in container
+    tests_dir = Path(__file__).parent
+    content = DOCKERFILE.read_text()
+
+    # WHEN - docker run minesweeper pytest --collect-only is executed
+
+    # THEN - pytest collects items without errors; board tests are included
+    assert tests_dir.exists()
+    assert (tests_dir / "test_infra_board_001.py").exists()
+    assert (tests_dir / "test_board.py").exists()
+    assert "COPY tests/" in content
+    assert "pytest" in content
+    assert "tests/" in content

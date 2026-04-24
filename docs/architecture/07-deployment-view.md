@@ -6,7 +6,7 @@ Minesweeper is a single-process CLI application. There is no server, container i
 
 ## 7.2 Deployment Diagram (C4 Level)
 
-Diagram source: `architecture/diagrams/deployment.puml`
+Diagram source: `docs/architecture/diagrams/deployment.puml`
 
 ```plantuml
 @startuml deployment

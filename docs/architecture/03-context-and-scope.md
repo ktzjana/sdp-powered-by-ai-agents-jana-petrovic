@@ -6,7 +6,7 @@ Minesweeper is a self-contained CLI application. It has no external systems, dat
 
 ## 3.2 Context Diagram (C4 Level 1)
 
-Diagram source: `architecture/diagrams/c4-context.puml`
+Diagram source: `docs/architecture/diagrams/c4-context.puml`
 
 ```plantuml
 @startuml c4-context

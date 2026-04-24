@@ -25,3 +25,7 @@ class Game:
 
     def check_win(self) -> bool:
         return all(c.revealed for c in self.board.grid if not c.is_mine)
+
+    def flag(self, row: int, col: int) -> None:
+        if self.state == GameState.PLAYING:
+            self.board.toggle_flag(row, col)
