@@ -47,7 +47,7 @@ Recursion maps naturally to the problem. Grid sizes in a kata are small (typical
 Accepted
 
 ### Context
-The kata is self-contained and must be easy to run anywhere Python 3.10+ is installed.
+The kata is self-contained and must be easy to run anywhere Python 3.12+ is installed.
 
 ### Decision
 Use Python stdlib only (`random`, `dataclasses`, `sys`).
@@ -56,7 +56,7 @@ Use Python stdlib only (`random`, `dataclasses`, `sys`).
 Zero installation friction. No dependency management needed. All required functionality is available in the stdlib.
 
 ### Consequences
-- (+) `python cli.py` is the only command needed to run the game.
+- (+) `python3 minesweeper/cli.py` is enough to run the game locally.
 - (-) No rich terminal rendering (colours, cursor control); plain ASCII board only.
 
 ---

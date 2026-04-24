@@ -5,7 +5,6 @@ participant Game
 participant Board
 
 Player -> CLI : "f 1 4"
-CLI -> CLI : InputParser.parse("f 1 4")
 CLI -> Game : flag(row=1, col=4)
 Game -> Board : toggle_flag(1, 4)
 Board --> Game : OK

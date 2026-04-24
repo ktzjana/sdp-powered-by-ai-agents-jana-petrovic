@@ -9,12 +9,13 @@ Container_Boundary(domain, "Domain") {
 }
 
 Container_Boundary(ctrl, "Game Controller") {
-  Component(game, "Game", "Class", "Game loop, win/loss detection, delegates to domain")
+  Component(game, "Game", "Class", "Applies reveal/flag actions and updates game state")
 }
 
 Container_Boundary(cli_layer, "CLI") {
+  Component(cli_main, "CLI Main", "Function", "Reads stdin, dispatches commands, prints terminal messages")
   Component(renderer, "BoardRenderer", "Function", "Formats and prints board to stdout")
-  Component(parser, "InputParser", "Function", "Parses raw input string into command + coordinates")
+  Component(parser, "InputParser", "Function", "Parses raw input string into command + coordinates (utility)")
 }
 
 Rel(game, board, "Reads/mutates")
@@ -22,7 +23,8 @@ Rel(game, reveal, "Calls")
 Rel(reveal, board, "Reads/mutates")
 Rel(board, cell, "Contains")
 Rel(mine_placer, board, "Populates")
-Rel(parser, game, "Passes command")
-Rel(game, renderer, "Passes board snapshot")
+Rel(cli_main, game, "Calls reveal/flag")
+Rel(cli_main, renderer, "Renders board")
+Rel(cli_main, parser, "Can parse command")
 
 @enduml
