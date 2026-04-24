@@ -2,26 +2,9 @@
 
 ## 5.1 Level 1 — Container Diagram (C4)
 
+![Container Diagram](diagrams/c4-container.svg)
+
 Diagram source: `docs/architecture/diagrams/c4-container.puml`
-
-```plantuml
-@startuml c4-container
-!include c4-lib/C4_Container.puml
-
-Person(player, "Player", "Interacts via terminal")
-
-System_Boundary(minesweeper, "Minesweeper") {
-  Container(cli, "CLI", "Python module", "Reads stdin, renders board to stdout")
-  Container(controller, "Game Controller", "Python module", "Orchestrates game loop and input handling")
-  Container(domain, "Domain", "Python module", "Board state, mine placement, reveal/flag logic")
-}
-
-Rel(player, cli, "Types commands", "stdin/stdout")
-Rel(cli, controller, "Parsed command")
-Rel(controller, domain, "Calls")
-
-@enduml
-```
 
 ### Container Responsibilities
 
@@ -35,38 +18,9 @@ Rel(controller, domain, "Calls")
 
 ## 5.2 Level 2 — Component Diagram (C4)
 
+![Component Diagram](diagrams/c4-component.svg)
+
 Diagram source: `docs/architecture/diagrams/c4-component.puml`
-
-```plantuml
-@startuml c4-component
-!include c4-lib/C4_Component.puml
-
-Container_Boundary(domain, "Domain") {
-  Component(board, "Board", "Class", "Holds cell grid, mine positions, revealed/flagged state")
-  Component(cell, "Cell", "Class", "Represents a single cell: mine, adjacent count, state")
-  Component(mine_placer, "MinePlacer", "Function", "Randomly distributes mines on the board")
-  Component(reveal, "RevealService", "Function", "Reveals a cell; triggers flood-fill for empty cells")
-}
-
-Container_Boundary(ctrl, "Game Controller") {
-  Component(game, "Game", "Class", "Game loop, win/loss detection, delegates to domain")
-}
-
-Container_Boundary(cli_layer, "CLI") {
-  Component(renderer, "BoardRenderer", "Function", "Formats and prints board to stdout")
-  Component(parser, "InputParser", "Function", "Parses raw input string into command + coordinates")
-}
-
-Rel(game, board, "Reads/mutates")
-Rel(game, reveal, "Calls")
-Rel(reveal, board, "Reads/mutates")
-Rel(board, cell, "Contains")
-Rel(mine_placer, board, "Populates")
-Rel(parser, game, "Passes command")
-Rel(game, renderer, "Passes board snapshot")
-
-@enduml
-```
 
 ### Component Responsibilities
 

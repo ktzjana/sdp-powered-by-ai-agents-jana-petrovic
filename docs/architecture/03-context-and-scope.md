@@ -6,19 +6,9 @@ Minesweeper is a self-contained CLI application. It has no external systems, dat
 
 ## 3.2 Context Diagram (C4 Level 1)
 
+![System Context](diagrams/c4-context.svg)
+
 Diagram source: `docs/architecture/diagrams/c4-context.puml`
-
-```plantuml
-@startuml c4-context
-!include c4-lib/C4_Context.puml
-
-Person(player, "Player", "Runs the game via CLI and interacts by typing commands")
-System(minesweeper, "Minesweeper", "CLI-based puzzle game. Manages board state, processes player input, and displays results.")
-
-Rel(player, minesweeper, "Reveal cell / Flag cell / Start game", "stdin/stdout")
-
-@enduml
-```
 
 ## 3.3 External Interfaces
 
