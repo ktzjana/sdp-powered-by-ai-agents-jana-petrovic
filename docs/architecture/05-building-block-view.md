@@ -26,7 +26,7 @@ Diagram source: `docs/architecture/diagrams/c4-component.puml`
 
 | Component     | Location        | Responsibility                                              |
 |---------------|-----------------|-------------------------------------------------------------|
-| Board         | `board.py`      | 2D grid of cells; exposes reveal/flag operations.           |
+| Board         | `board.py`      | 2D grid of  cells; exposes reveal/flag operations.           |
 | Cell          | `board.py`      | Data class: `is_mine`, `adjacent_count`, `revealed`, `flagged`. |
 | MinePlacer    | `board.py`      | Randomly places mines and computes adjacent counts.         |
 | RevealService | `board.py`      | Reveals a cell; recursively reveals neighbours if empty.    |
